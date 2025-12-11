@@ -5,9 +5,11 @@
 ## 1. Project Context & Philosophy
 You are building the **Kernel** of `dx-www`, a revolutionary web runtime that replaces React/Next.js.
 *   **Goal:** January 1, 2026 Release.
+*   **Status:** ✅ Core runtime complete (338B Micro / 7.5KB Macro)
 *   **Core Philosophy:** "Binary Everywhere." We do not ship JSON. We do not ship HTML strings. We do not use Virtual DOM diffing.
 *   **Architecture:** Hybrid Template Instantiation Protocol (HTIP). We use WASM to drive the browser's `cloneNode` C++ engine via batched operations to break the "WASM Wall."
 *   **Performance Target:** Zero-Parse, Zero-GC (Garbage Collection), Zero-Hydration.
+*   **Intelligence:** Compiler automatically selects optimal runtime based on app complexity (see COMPILER_INTELLIGENCE.md).
 
 ## 2. Tech Stack & Versions
 *   **Language:** Rust (Edition 2024 / Latest Stable).
@@ -53,7 +55,26 @@ Implement a Cargo Workspace structure. Do not build a monolith.
 *   Use **Struct of Arrays (SoA)** or flat buffers where possible.
 *   Use **Object Pooling**. Do not create/drop structs per frame.
 
-## 5. Module Specific Implementation Instructions
+## 5. Compiler Intelligence (Implemented Dec 12, 2025)
+
+### Automatic Runtime Selection
+The `dx-compiler` now includes an analyzer that automatically chooses between:
+- **Micro (338B):** For simple apps (< 10 components, low state complexity)
+- **Macro (7.5KB):** For complex apps (many components, high state, async logic)
+
+See [docs/COMPILER_INTELLIGENCE.md](../docs/COMPILER_INTELLIGENCE.md) for full details.
+
+### Decision Rules
+1. High state complexity (6+ vars or complex types) → Macro
+2. ≥10 components → Macro
+3. ≥10 event handlers → Macro
+4. Async + Many hooks → Macro
+5. Effects + Many hooks → Macro
+6. Deep component trees (>5) → Macro
+7. Large JSX trees (>50 nodes) → Macro
+8. Default → Micro (for simple apps)
+
+## 6. Module Specific Implementation Instructions
 
 ### Crate: `dx-core` (The Memory Manager)
 *   Define a Linear Memory Layout:

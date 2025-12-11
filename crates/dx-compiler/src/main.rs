@@ -17,9 +17,10 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+mod analyzer;
 mod codegen;
 mod dev_server;
 mod packer;
@@ -94,17 +95,17 @@ async fn main() -> Result<()> {
             skip_optimize,
         } => {
             build_project(entry, output, verbose, skip_optimize).await?;
-        },
+        }
         Commands::Dev {
             entry,
             port,
             verbose,
         } => {
             run_dev_server(entry, port, verbose).await?;
-        },
+        }
         Commands::New { name, template } => {
             create_new_project(name, template)?;
-        },
+        }
     }
 
     Ok(())
@@ -122,8 +123,8 @@ async fn build_project(
     println!("{}", style("🏭 Dx Compiler - Building...").bold().cyan());
     println!();
 
-    // Create progress bar
-    let pb = ProgressBar::new(6);
+    // Create progress bar (7 steps now with analysis)
+    let pb = ProgressBar::new(7);
     pb.set_style(
         ProgressStyle::default_bar()
             .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>2}/{len:2} {msg}")
@@ -136,27 +137,54 @@ async fn build_project(
     let parsed_ast = parser::parse_entry(&entry, verbose).context("Failed to parse entry file")?;
     pb.inc(1);
 
-    // Step 2: Tree Shake
+    // Step 2: Analyze & Decide (THE INTELLIGENCE)
+    pb.set_message("Analyzing complexity...");
+    let (metrics, runtime_variant) = analyzer::analyze_and_decide(&parsed_ast, verbose)?;
+
+    println!(
+        "  🧠 {} runtime selected",
+        if runtime_variant == analyzer::RuntimeVariant::Micro {
+            style("Micro (338B)").green().bold()
+        } else {
+            style("Macro (7.5KB)").cyan().bold()
+        }
+    );
+    pb.inc(1);
+
+    // Step 3: Tree Shake
     pb.set_message("Tree shaking imports...");
     let shaken = parser::tree_shake(parsed_ast, verbose)?;
     pb.inc(1);
 
-    // Step 3: Split
+    // Step 4: Split
     pb.set_message("Splitting structure from logic...");
     let (templates, bindings, state_schema) = splitter::split_components(shaken, verbose)?;
     pb.inc(1);
 
-    // Step 4: Generate HTIP Binary (NO RUST/WASM - pure data!)
+    // Step 5: Generate HTIP Binary (NO RUST/WASM - pure data!)
     pb.set_message("Generating HTIP binary...");
     let (htip_stream, _string_table) =
         codegen::generate_htip(&templates, &bindings, &state_schema, verbose)?;
     pb.inc(1);
 
-    // Step 5: Pack .dxb (templates + HTIP stream, NO WASM!)
+    // Step 6: Pack .dxb (templates + HTIP stream + runtime metadata)
     pb.set_message("Packing .dxb artifact...");
     packer::pack_dxb_htip(&output, &templates, &htip_stream, verbose)?;
+
+    // Write runtime selection metadata
+    let metadata_path = output.join("runtime.json");
+    let metadata = serde_json::json!({
+        "runtime": runtime_variant.as_str(),
+        "metrics": metrics,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+    });
+    std::fs::write(metadata_path, serde_json::to_string_pretty(&metadata)?)?;
     pb.inc(1);
-    pb.inc(1); // Skip extra step
+
+    // Step 7: Copy correct runtime WASM
+    pb.set_message(format!("Copying {} runtime...", runtime_variant.as_str()));
+    copy_runtime_wasm(&output, runtime_variant, verbose)?;
+    pb.inc(1);
 
     pb.finish_with_message("Build complete!");
 
@@ -164,7 +192,61 @@ async fn build_project(
     println!();
     println!("{} Built in {:.2}s", style("✓").green().bold(), elapsed.as_secs_f32());
     println!("  {} {}", style("Output:").dim(), output.display());
+    println!(
+        "  {} {} (auto-selected)",
+        style("Runtime:").dim(),
+        runtime_variant.description()
+    );
     println!();
+
+    Ok(())
+}
+
+/// Copy the appropriate runtime WASM based on variant selection
+fn copy_runtime_wasm(
+    output: &Path,
+    variant: analyzer::RuntimeVariant,
+    verbose: bool,
+) -> Result<()> {
+    use std::fs;
+
+    // Determine source path based on variant
+    let runtime_src = match variant {
+        analyzer::RuntimeVariant::Micro => {
+            // Look for dx-client-tiny in target/release or pkg/
+            let candidates = [
+                PathBuf::from("target/pkg_minimal/dx_client_bg.wasm"),
+                PathBuf::from("target/release/dx-client-tiny.wasm"),
+                PathBuf::from("../target/pkg_minimal/dx_client_bg.wasm"),
+            ];
+
+            candidates.into_iter().find(|p| p.exists()).context(
+                "dx-client-tiny.wasm not found. Run: cargo build --release --bin dx-client-tiny",
+            )?
+        }
+        analyzer::RuntimeVariant::Macro => {
+            // Look for dx-client in target/release or pkg/
+            let candidates = [
+                PathBuf::from("target/pkg/dx_client_bg.wasm"),
+                PathBuf::from("target/release/dx-client.wasm"),
+                PathBuf::from("../target/pkg/dx_client_bg.wasm"),
+            ];
+
+            candidates
+                .into_iter()
+                .find(|p| p.exists())
+                .context("dx-client.wasm not found. Run: cargo build --release --bin dx-client")?
+        }
+    };
+
+    let runtime_dest = output.join("runtime.wasm");
+
+    if verbose {
+        println!("  Copying {} -> {}", runtime_src.display(), runtime_dest.display());
+    }
+
+    fs::copy(&runtime_src, &runtime_dest)
+        .with_context(|| format!("Failed to copy runtime from {}", runtime_src.display()))?;
 
     Ok(())
 }

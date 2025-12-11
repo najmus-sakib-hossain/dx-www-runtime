@@ -45,6 +45,9 @@ walkdir = "2.4"
 # Hashing for cache invalidation
 blake3 = "1.5"
 
+# Datetime for metadata
+chrono = "0.4"
+
 [dev-dependencies]
 tempfile = "3.8"
 

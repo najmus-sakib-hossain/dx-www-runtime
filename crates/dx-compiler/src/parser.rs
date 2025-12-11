@@ -15,7 +15,7 @@
 use anyhow::{Context, Result, anyhow};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -105,7 +105,7 @@ fn parse_module_recursive(
     let module = parse_single_module(path, verbose)?;
 
     // Queue dependencies
-    for import in &module.imports {
+    for _import in &module.imports {
         // TODO: Resolve import paths and recurse
         // This is simplified - production would need proper module resolution
     }

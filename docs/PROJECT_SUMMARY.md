@@ -193,7 +193,16 @@ Based on architecture (actual benchmarks pending):
 
 ## Next Steps (Roadmap)
 
-### Phase 3: Compiler (Not Started)
+### Week 1: Developer Experience (Dec 12-18)
+- [x] **Intelligent Compiler** - Auto-selects Micro/Macro runtime (Dec 12) ✨
+- [ ] Hot-reload working in dev mode
+- [ ] Source maps generation
+- [ ] Error messages with line numbers
+- [ ] VS Code syntax highlighting
+- [ ] TypeScript definitions for .dx files
+
+### Phase 3: Compiler (Partially Complete)
+- [x] Intelligent runtime selection
 - [ ] Parse custom syntax (`.dx` files)
 - [ ] Generate template binary format
 - [ ] Generate binding maps

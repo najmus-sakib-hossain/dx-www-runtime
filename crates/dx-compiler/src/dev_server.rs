@@ -119,7 +119,7 @@ fn should_rebuild(event: &Event) -> bool {
                     .map(|ext| matches!(ext, "tsx" | "ts" | "jsx" | "js" | "dx"))
                     .unwrap_or(false)
             })
-        },
+        }
         _ => false,
     }
 }
