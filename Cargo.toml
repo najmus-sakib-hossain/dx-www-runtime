@@ -50,3 +50,5 @@ dx-core = { path = "crates/dx-core" }
 dx-dom = { path = "crates/dx-dom" }
 dx-morph = { path = "crates/dx-morph" }
 dx-sched = { path = "crates/dx-sched" }
+dx-compiler = { path = "crates/dx-compiler" }
+dx-binary = { path = "crates/dx-binary" }

@@ -16,6 +16,9 @@ dx-core.workspace = true
 dx-dom.workspace = true
 dx-morph.workspace = true
 dx-sched.workspace = true
+dx-binary.workspace = true
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+rand = "0.8"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook.workspace = true

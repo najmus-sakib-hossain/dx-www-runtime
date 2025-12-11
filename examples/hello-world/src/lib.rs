@@ -14,6 +14,8 @@ use wasm_bindgen::prelude::*;
 use dx_morph::{CounterState, ComponentState};
 use std::cell::RefCell;
 
+pub mod htip_demo;
+
 // ============================================================================
 // TEMPLATE BINARY DATA (Mock - in production, this comes from compiler)
 // ============================================================================
