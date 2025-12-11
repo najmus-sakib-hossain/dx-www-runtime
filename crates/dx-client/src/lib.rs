@@ -38,6 +38,15 @@
 //! }
 //! ```
 
+// ============================================================================
+// TINY ALLOCATOR (~1KB vs ~10KB for std allocator)
+// ============================================================================
+
+extern crate wee_alloc;
+
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
 use wasm_bindgen::prelude::*;
 use dx_packet::*;
 use core::ptr;

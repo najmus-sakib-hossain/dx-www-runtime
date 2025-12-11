@@ -2,6 +2,7 @@
 //!
 //! This is the core execution engine.
 
+use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, Node};
 use dx_packet::*;
@@ -236,6 +237,10 @@ impl Renderer {
         Ok(())
     }
     
+    // ========================================================================
+    // INLINE JS HELPERS (Zero-Overhead)
+    // ========================================================================
+    
     fn execute_class_toggle(
         &mut self,
         target_id: u16,
@@ -246,14 +251,8 @@ impl Renderer {
             .ok_or(ErrorCode::StringIndexOutOfBounds as u8)?;
         
         if let Some(node) = self.node_registry.get(target_id) {
-            if let Some(elem) = node.dyn_ref::<Element>() {
-                let class_list = elem.class_list();
-                if payload.enable != 0 {
-                    let _ = class_list.add_1(class_name);
-                } else {
-                    let _ = class_list.remove_1(class_name);
-                }
-            }
+            // Use inline JS helper for minimal WASM size
+            toggle_class(node, class_name, payload.enable != 0);
         }
         
         Ok(())
@@ -280,16 +279,35 @@ impl Renderer {
             .ok_or(ErrorCode::StringIndexOutOfBounds as u8)?;
         
         if let Some(node) = self.node_registry.get(target_id) {
-            if let Some(elem) = node.dyn_ref::<web_sys::HtmlElement>() {
-                let _ = elem.style().set_property(prop, value);
-            }
+            // Use inline JS helper
+            set_style(node, prop, value);
         }
         
         Ok(())
     }
+
     
     /// Get node count
     pub fn node_count(&self) -> u32 {
         self.node_registry.count()
     }
+}
+
+// Inline JS snippets - fastest and smallest way to touch DOM
+#[wasm_bindgen(inline_js = "
+    export function toggle_class(node, name, enable) {
+        if (node instanceof Element) {
+            if (enable) node.classList.add(name);
+            else node.classList.remove(name);
+        }
+    }
+    export function set_style(node, prop, val) {
+        if (node instanceof HTMLElement) {
+            node.style.setProperty(prop, val);
+        }
+    }
+")]
+extern "C" {
+    fn toggle_class(node: &Node, name: &str, enable: bool);
+    fn set_style(node: &Node, prop: &str, val: &str);
 }
