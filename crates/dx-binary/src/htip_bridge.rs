@@ -3,8 +3,11 @@
 //! Connects dx-binary operations to dx-dom rendering.
 //! This is the critical path: Binary → WASM → Browser.
 
+#[cfg(target_arch = "wasm32")]
 use crate::deserializer::HtipStream;
+#[cfg(target_arch = "wasm32")]
 use crate::opcodes::{Operation, PropertyValue};
+#[cfg(target_arch = "wasm32")]
 use std::collections::HashMap;
 
 #[cfg(target_arch = "wasm32")]
@@ -15,6 +18,7 @@ use web_sys::{Document, Element, HtmlElement, HtmlTemplateElement, Node, Text};
 /// The HTIP Application Engine
 ///
 /// Manages template cache and live instances
+#[cfg(target_arch = "wasm32")]
 pub struct HtipEngine {
     /// Template cache: template_id -> HtmlTemplateElement
     templates: HashMap<u16, HtmlTemplateElement>,
@@ -23,12 +27,11 @@ pub struct HtipEngine {
     /// String table from HTIP payload
     strings: Vec<String>,
     /// Document reference
-    #[cfg(target_arch = "wasm32")]
     document: Document,
 }
 
+#[cfg(target_arch = "wasm32")]
 impl HtipEngine {
-    #[cfg(target_arch = "wasm32")]
     pub fn new() -> Result<Self, JsValue> {
         let window = web_sys::window().ok_or("No window")?;
         let document = window.document().ok_or("No document")?;
