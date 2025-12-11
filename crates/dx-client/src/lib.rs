@@ -24,6 +24,7 @@
 
 mod allocator;
 
+#[cfg(target_arch = "wasm32")]
 #[global_allocator]
 static ALLOC: allocator::BumpAlloc = allocator::BumpAlloc;
 
@@ -33,11 +34,13 @@ use wasm_bindgen::prelude::*;
 
 mod node_registry;
 mod renderer;
+mod stream_reader;
 mod string_table;
 mod template_cache;
 
 pub use node_registry::NodeRegistry;
 pub use renderer::Renderer;
+pub use stream_reader::{ChunkDispatcher, StreamReader};
 pub use string_table::StringTableReader;
 pub use template_cache::TemplateCache;
 
@@ -117,4 +120,112 @@ pub fn reset() {
     unsafe {
         allocator::reset_heap();
     }
+}
+
+// ============================================================================
+// CHUNKED STREAMING API (Phase 6: Day 12)
+// ============================================================================
+
+thread_local! {
+    static STREAM_READER: RefCell<Option<StreamReader>> = RefCell::new(None);
+    static CHUNK_DISPATCHER: RefCell<Option<ChunkDispatcher>> = RefCell::new(None);
+}
+
+/// Initialize streaming mode
+///
+/// Call this before processing chunked streams
+#[wasm_bindgen]
+pub fn init_streaming() -> Result<(), u8> {
+    STREAM_READER.with(|sr| {
+        *sr.borrow_mut() = Some(StreamReader::new());
+        Ok::<(), u8>(())
+    })?;
+
+    CHUNK_DISPATCHER.with(|cd| {
+        *cd.borrow_mut() = Some(ChunkDispatcher::new());
+        Ok(())
+    })
+}
+
+/// Feed chunk data to the stream reader
+///
+/// Returns number of complete chunks ready for processing
+/// Call poll_next_chunk() to retrieve them
+#[wasm_bindgen]
+pub fn feed_chunk_data(data: &[u8]) -> Result<u32, u8> {
+    STREAM_READER.with(|sr| {
+        let mut reader = sr.borrow_mut();
+        let reader = reader.as_mut().ok_or(10u8)?; // ErrorCode::NotInitialized
+
+        let chunks_ready = reader.feed(data)?;
+        Ok(chunks_ready as u32)
+    })
+}
+
+/// Poll for next complete chunk and process it
+///
+/// Returns true if chunk was processed, false if no chunk available
+#[wasm_bindgen]
+pub fn poll_and_process_chunk() -> Result<bool, u8> {
+    let chunk = STREAM_READER.with(|sr| {
+        let mut reader = sr.borrow_mut();
+        let reader = reader.as_mut().ok_or(10u8)?; // ErrorCode::NotInitialized
+        Ok::<_, u8>(reader.poll_chunk())
+    })?;
+
+    if let Some((chunk_type, data)) = chunk {
+        CHUNK_DISPATCHER.with(|cd| {
+            let mut dispatcher = cd.borrow_mut();
+            let dispatcher = dispatcher.as_mut().ok_or(10u8)?; // ErrorCode::NotInitialized
+            dispatcher.handle_chunk(chunk_type, data)
+        })?;
+
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+/// Check if stream is finished (received EOF)
+#[wasm_bindgen]
+pub fn is_stream_finished() -> bool {
+    STREAM_READER.with(|sr| {
+        sr.borrow()
+            .as_ref()
+            .map(|r| r.is_finished())
+            .unwrap_or(false)
+    })
+}
+
+/// Finalize streaming: Process accumulated chunks and render
+///
+/// Call this after is_stream_finished() returns true
+#[wasm_bindgen]
+pub fn finalize_stream() -> Result<(), u8> {
+    // Get accumulated data
+    let (layout_data, _state_data, _wasm_data) = CHUNK_DISPATCHER.with(|cd| {
+        let mut dispatcher = cd.borrow_mut();
+        let dispatcher = dispatcher.as_mut().ok_or(10u8)?; // ErrorCode::NotInitialized
+
+        if !dispatcher.is_complete() {
+            return Err(11u8); // ErrorCode::IncompleteStream
+        }
+
+        Ok::<_, u8>((
+            dispatcher.take_layout(),
+            dispatcher.take_state(),
+            dispatcher.take_wasm(),
+        ))
+    })?;
+
+    // TODO: Process layout_data to register templates
+    // TODO: Process state_data to initialize memory
+    // TODO: WASM is handled by browser's WebAssembly.instantiateStreaming
+
+    // For now, just validate we got the data
+    if layout_data.is_none() {
+        return Err(12u8); // ErrorCode::MissingLayout
+    }
+
+    Ok(())
 }

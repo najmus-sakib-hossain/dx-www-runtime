@@ -2,7 +2,7 @@
 
 **Date:** December 12, 2025  
 **Project:** dx-www Runtime  
-**Phase:** Compiler Factory + WASM Optimization
+**Phase:** Compiler Factory + WASM Optimization + Phase 6 Day 12
 
 ---
 
@@ -17,11 +17,12 @@
 | **dx-client-tiny** | 611 bytes | 395 bytes | **338 bytes** | 🏆 **5.9x smaller than Svelte!** |
 | **dx-client** | 17.2 KB | 8.6 KB | **7.5 KB** | ✅ **Sub-14 KB achieved** |
 
-### Both Targets Crushed
+### All Targets Crushed
 1. ✅ **Sub-14 KB:** Achieved **8.6 KB gzipped** (full client)
 2. ✅ **Beat Svelte:** Achieved **338 bytes Brotli** (69% smaller than 2 KB target)
 3. ✅ **Working TSX Compiler** (TSX → .dxb in 30ms)
 4. ✅ **Complete CLI Tools** (`dx build`, `dx dev`, `dx new`)
+5. ✅ **Phase 6 Day 12:** Stream Consumer with incremental chunk processing (5/5 tests passing)
 
 ### Auto-Switching Strategy
 - Small sites (< 10 components) → **dx-client-tiny** (338 bytes)
