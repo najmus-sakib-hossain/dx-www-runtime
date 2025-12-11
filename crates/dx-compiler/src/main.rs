@@ -22,6 +22,7 @@ use std::time::Instant;
 
 mod analyzer;
 mod codegen;
+mod codegen_micro;
 mod dev_server;
 mod packer;
 mod parser;
@@ -161,10 +162,24 @@ async fn build_project(
     let (templates, bindings, state_schema) = splitter::split_components(shaken, verbose)?;
     pb.inc(1);
 
-    // Step 5: Generate HTIP Binary (NO RUST/WASM - pure data!)
-    pb.set_message("Generating HTIP binary...");
+    // Step 5: Generate HTIP Binary (for Macro mode) OR Rust FFI (for Micro mode)
+    pb.set_message("Generating code...");
+    
+    // Generate HTIP binary (used by both modes for templates)
     let (htip_stream, _string_table) =
         codegen::generate_htip(&templates, &bindings, &state_schema, verbose)?;
+    
+    // For Micro mode: also generate raw Rust FFI code
+    if runtime_variant == analyzer::RuntimeVariant::Micro {
+        pb.set_message("Generating Micro Rust FFI code...");
+        let rust_code = codegen_micro::generate_micro(&templates, &bindings, &state_schema, verbose)?;
+        let rust_path = output.join("generated.rs");
+        std::fs::write(&rust_path, &rust_code)?;
+        
+        if verbose {
+            println!("  ✓ Generated Micro Rust code: {}", rust_path.display());
+        }
+    }
     pb.inc(1);
 
     // Step 6: Pack .dxb (templates + HTIP stream + runtime metadata)
