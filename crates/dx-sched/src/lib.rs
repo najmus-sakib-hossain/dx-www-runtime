@@ -14,11 +14,11 @@
 //! - Use Performance API for nanosecond timing
 //! - Event queue uses ring buffer (from dx-core)
 
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use web_sys::{window, Performance};
 use std::cell::RefCell;
 use std::rc::Rc;
+use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
+use web_sys::{Performance, window};
 
 // ============================================================================
 // FRAME BUDGET CONFIGURATION
@@ -45,28 +45,28 @@ impl FrameTimer {
     pub fn new() -> Self {
         let window = window().expect("no window");
         let performance = window.performance().expect("no performance API");
-        
+
         Self {
             performance,
             frame_start: 0.0,
         }
     }
-    
+
     /// Mark the start of a frame
     pub fn start_frame(&mut self) {
         self.frame_start = self.performance.now();
     }
-    
+
     /// Get elapsed time since frame start (in ms)
     pub fn elapsed(&self) -> f64 {
         self.performance.now() - self.frame_start
     }
-    
+
     /// Check if we've exceeded the frame budget
     pub fn should_yield(&self) -> bool {
         self.elapsed() > YIELD_THRESHOLD_MS
     }
-    
+
     /// Get remaining budget (for logging)
     pub fn remaining_budget(&self) -> f64 {
         FRAME_BUDGET_MS - self.elapsed()
@@ -106,44 +106,44 @@ impl TaskQueue {
             tasks: Vec::with_capacity(64),
         }
     }
-    
+
     /// Schedule a task with given priority
     pub fn schedule(&mut self, priority: TaskPriority, callback: TaskCallback) {
         self.tasks.push(Task { priority, callback });
         // Keep sorted by priority (Immediate first)
         self.tasks.sort_by_key(|t| t.priority);
     }
-    
+
     /// Execute tasks until budget is exhausted
     pub fn drain_until_budget(&mut self, timer: &FrameTimer) -> usize {
         let mut executed = 0;
-        
+
         while !self.tasks.is_empty() {
             if timer.should_yield() {
                 break;
             }
-            
+
             if let Some(task) = self.tasks.first() {
                 // If next task is Idle priority and we're running low, skip it
                 if task.priority == TaskPriority::Idle && timer.elapsed() > 2.0 {
                     break;
                 }
             }
-            
+
             if let Some(task) = self.tasks.drain(0..1).next() {
                 (task.callback)();
                 executed += 1;
             }
         }
-        
+
         executed
     }
-    
+
     /// Clear all tasks
     pub fn clear(&mut self) {
         self.tasks.clear();
     }
-    
+
     /// Get number of pending tasks
     pub fn len(&self) -> usize {
         self.tasks.len()
@@ -170,46 +170,47 @@ impl Scheduler {
             is_running: false,
         }
     }
-    
+
     /// Schedule a task
     pub fn schedule(&mut self, priority: TaskPriority, callback: TaskCallback) {
         self.task_queue.schedule(priority, callback);
     }
-    
+
     /// Process one frame
     pub fn tick(&mut self) {
         self.timer.start_frame();
         self.frame_count += 1;
-        
+
         // Execute queued tasks
         let executed = self.task_queue.drain_until_budget(&self.timer);
-        
+
         // Flush pending DOM operations
         #[cfg(target_arch = "wasm32")]
         {
             dx_dom::flush_queue();
         }
-        
+
         // Log performance stats (every 60 frames = 1 second at 60fps)
         if self.frame_count % 60 == 0 {
             let elapsed = self.timer.elapsed();
             let remaining = self.timer.remaining_budget();
-            
+
             #[cfg(target_arch = "wasm32")]
             web_sys::console::log_1(
                 &format!(
                     "Frame {}: {}ms used, {}ms budget remaining, {} tasks executed",
                     self.frame_count, elapsed, remaining, executed
-                ).into()
+                )
+                .into(),
             );
         }
     }
-    
+
     /// Check if scheduler is running
     pub fn is_running(&self) -> bool {
         self.is_running
     }
-    
+
     /// Set running state
     pub fn set_running(&mut self, running: bool) {
         self.is_running = running;
@@ -245,16 +246,16 @@ pub fn start_scheduler() {
             false
         }
     });
-    
+
     if already_running {
         #[cfg(target_arch = "wasm32")]
         web_sys::console::warn_1(&"Scheduler already running".into());
         return;
     }
-    
+
     #[cfg(target_arch = "wasm32")]
     web_sys::console::log_1(&"dx-sched: Starting RAF loop".into());
-    
+
     // Kick off the RAF loop
     request_next_frame();
 }
@@ -262,7 +263,7 @@ pub fn start_scheduler() {
 #[wasm_bindgen]
 pub fn stop_scheduler() {
     with_scheduler(|scheduler| scheduler.set_running(false));
-    
+
     #[cfg(target_arch = "wasm32")]
     web_sys::console::log_1(&"dx-sched: Stopping RAF loop".into());
 }
@@ -270,11 +271,11 @@ pub fn stop_scheduler() {
 /// Request the next animation frame
 fn request_next_frame() {
     let window = window().expect("no window");
-    
+
     // Create closure for RAF callback
     let closure = Rc::new(RefCell::new(None::<Closure<dyn FnMut()>>));
     let closure_clone = closure.clone();
-    
+
     *closure.borrow_mut() = Some(Closure::new(move || {
         // Process this frame
         let should_continue = with_scheduler(|scheduler| {
@@ -285,19 +286,17 @@ fn request_next_frame() {
                 true
             }
         });
-        
+
         if !should_continue {
             return;
         }
-        
+
         // Schedule next frame
         request_next_frame();
     }));
-    
+
     window
-        .request_animation_frame(
-            closure_clone.borrow().as_ref().unwrap().as_ref().unchecked_ref()
-        )
+        .request_animation_frame(closure_clone.borrow().as_ref().unwrap().as_ref().unchecked_ref())
         .expect("failed to request animation frame");
 }
 
@@ -311,7 +310,7 @@ pub fn schedule_immediate(callback: &js_sys::Function) {
     let task = Box::new(move || {
         callback_clone.call0(&JsValue::NULL).ok();
     });
-    
+
     with_scheduler(|scheduler| scheduler.schedule(TaskPriority::Immediate, task));
 }
 
@@ -321,7 +320,7 @@ pub fn schedule_normal(callback: &js_sys::Function) {
     let task = Box::new(move || {
         callback_clone.call0(&JsValue::NULL).ok();
     });
-    
+
     with_scheduler(|scheduler| scheduler.schedule(TaskPriority::Normal, task));
 }
 
@@ -331,7 +330,7 @@ pub fn schedule_idle(callback: &js_sys::Function) {
     let task = Box::new(move || {
         callback_clone.call0(&JsValue::NULL).ok();
     });
-    
+
     with_scheduler(|scheduler| scheduler.schedule(TaskPriority::Idle, task));
 }
 

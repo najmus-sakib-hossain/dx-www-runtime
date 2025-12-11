@@ -2,7 +2,7 @@
 //!
 //! Template definitions with binding metadata.
 
-use crate::opcodes::{TemplateDef, Binding};
+use crate::opcodes::{Binding, TemplateDef};
 use std::collections::HashMap;
 
 /// Template dictionary
@@ -98,8 +98,7 @@ mod tests {
     fn test_template_dictionary() {
         let mut dict = TemplateDictionary::new();
 
-        let template = TemplateBuilder::new(0, 123)
-            .build();
+        let template = TemplateBuilder::new(0, 123).build();
 
         dict.add(template);
 
@@ -110,8 +109,7 @@ mod tests {
 
     #[test]
     fn test_template_builder() {
-        let template = TemplateBuilder::new(42, 100)
-            .build();
+        let template = TemplateBuilder::new(42, 100).build();
 
         assert_eq!(template.id, 42);
         assert_eq!(template.html_string_id, 100);

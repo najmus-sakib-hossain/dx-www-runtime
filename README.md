@@ -1050,3 +1050,8 @@ Route → handler → Serialize → Binary/JSON response
 - 📊 Fine-grained reactivity (Solid.js)
 - 🐍 Python full-stack (Django/FastAPI)
 - 🔧 PHP ecosystem (Laravel)
+
+### Useful Command to View Project Structure
+```bash
+cd /f/Code/dx-www-runtime && tree -L 2 -I 'target|node_modules|.git' --dirsfirst 2>/dev/null || find . -maxdepth 2 -type d ! -path "*/target/*" ! -path "*/.git/*" ! -path "*/node_modules/*" | head -40
+```

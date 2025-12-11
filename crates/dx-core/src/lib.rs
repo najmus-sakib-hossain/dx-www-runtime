@@ -48,7 +48,7 @@ impl CapabilityFlags {
     pub const NETWORK_FETCH: u64 = 1 << 2;
     pub const LOCAL_STORAGE: u64 = 1 << 3;
     pub const WORKER_SPAWN: u64 = 1 << 4;
-    
+
     pub fn has_capability(&self, flag: u64) -> bool {
         self.0 & flag != 0
     }
@@ -72,7 +72,7 @@ pub struct CapabilityManifest {
 
 impl CapabilityManifest {
     pub const MAGIC: u32 = 0x4458_5757; // "DXWW"
-    
+
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.magic != Self::MAGIC {
             return Err("Invalid magic number - binary corrupted");
@@ -117,7 +117,7 @@ impl MemoryManager {
             queue_offset: AtomicU32::new(0),
         }
     }
-    
+
     /// Get the Capability Manifest from Static Region
     pub fn get_manifest(&self) -> Result<&CapabilityManifest, &'static str> {
         unsafe {
@@ -127,37 +127,28 @@ impl MemoryManager {
             Ok(manifest)
         }
     }
-    
+
     /// Get a slice to the Static Region
     pub fn static_region(&self) -> &[u8] {
         unsafe {
-            std::slice::from_raw_parts(
-                self.base_ptr.add(STATIC_REGION_START),
-                STATIC_REGION_SIZE,
-            )
+            std::slice::from_raw_parts(self.base_ptr.add(STATIC_REGION_START), STATIC_REGION_SIZE)
         }
     }
-    
+
     /// Get a mutable slice to the State Region
     pub fn state_region_mut(&mut self) -> &mut [u8] {
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.base_ptr.add(STATE_REGION_START),
-                STATE_REGION_SIZE,
-            )
+            std::slice::from_raw_parts_mut(self.base_ptr.add(STATE_REGION_START), STATE_REGION_SIZE)
         }
     }
-    
+
     /// Get a mutable slice to the Queue Region
     pub fn queue_region_mut(&mut self) -> &mut [u8] {
         unsafe {
-            std::slice::from_raw_parts_mut(
-                self.base_ptr.add(QUEUE_REGION_START),
-                QUEUE_REGION_SIZE,
-            )
+            std::slice::from_raw_parts_mut(self.base_ptr.add(QUEUE_REGION_START), QUEUE_REGION_SIZE)
         }
     }
-    
+
     /// Allocate space in State Region (returns offset)
     pub fn alloc_state(&self, size: u32) -> Result<u32, &'static str> {
         let offset = self.state_offset.fetch_add(size, Ordering::SeqCst);
@@ -166,7 +157,7 @@ impl MemoryManager {
         }
         Ok(offset)
     }
-    
+
     /// Write bytes to State Region at given offset
     ///
     /// # Safety
@@ -177,7 +168,7 @@ impl MemoryManager {
             std::ptr::copy_nonoverlapping(data.as_ptr(), dest, data.len());
         }
     }
-    
+
     /// Read bytes from State Region at given offset
     ///
     /// # Safety
@@ -265,7 +256,7 @@ impl RenderOp {
             arg3: 0,
         }
     }
-    
+
     pub fn new_update_text(node_id: u32, text_offset: u32, text_len: u32) -> Self {
         Self {
             opcode: OpCode::UpdateText as u8,

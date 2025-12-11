@@ -183,7 +183,7 @@ pub struct SetProperty {
 /// Property value types
 #[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub enum PropertyValue {
-    String(u32),  // String ID
+    String(u32), // String ID
     Number(f64),
     Boolean(bool),
     Null,

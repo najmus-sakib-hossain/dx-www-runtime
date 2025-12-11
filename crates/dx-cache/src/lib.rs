@@ -24,9 +24,9 @@
 //! - Cache keyed by origin + public key
 //! - Tamper-proof - any modification = instant invalidation
 
-pub mod storage;
 pub mod crypto;
 pub mod preload;
+pub mod storage;
 
 use wasm_bindgen::prelude::*;
 use web_sys::console;
@@ -51,27 +51,27 @@ impl CacheConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     #[wasm_bindgen(getter)]
     pub fn db_name(&self) -> String {
         self.db_name.clone()
     }
-    
+
     #[wasm_bindgen(setter)]
     pub fn set_db_name(&mut self, name: String) {
         self.db_name = name;
     }
-    
+
     #[wasm_bindgen(getter)]
     pub fn version(&self) -> u32 {
         self.version
     }
-    
+
     #[wasm_bindgen(getter)]
     pub fn max_size(&self) -> usize {
         self.max_size
     }
-    
+
     #[wasm_bindgen(getter)]
     pub fn lifetime(&self) -> u64 {
         self.lifetime
@@ -84,7 +84,7 @@ impl Default for CacheConfig {
             db_name: "dx-cache".to_string(),
             version: 1,
             max_size: 128 * 1024 * 1024, // 128 MB
-            lifetime: 0, // Eternal
+            lifetime: 0,                 // Eternal
         }
     }
 }
@@ -93,24 +93,24 @@ impl Default for CacheConfig {
 #[wasm_bindgen]
 pub async fn init_cache(config: Option<CacheConfig>) -> Result<JsValue, JsValue> {
     console_error_panic_hook::set_once();
-    
+
     let config = config.unwrap_or_default();
-    
+
     console::log_1(&format!("🗄️  dx-cache initializing (v{})", config.version).into());
     console::log_1(&format!("📦 Max size: {} MB", config.max_size / 1024 / 1024).into());
-    
+
     if config.lifetime == 0 {
         console::log_1(&"♾️  Lifetime: ETERNAL".into());
     } else {
         console::log_1(&format!("⏰ Lifetime: {} days", config.lifetime / 86400).into());
     }
-    
+
     // Initialize storage systems
     storage::init_indexeddb(&config.db_name, config.version).await?;
     storage::init_cache_api().await?;
-    
+
     console::log_1(&"✅ dx-cache ready - Eternal storage initialized".into());
-    
+
     Ok(JsValue::TRUE)
 }
 
@@ -122,7 +122,7 @@ pub fn is_cache_available() -> bool {
         Some(w) => w,
         None => return false,
     };
-    
+
     // Check if IndexedDB exists
     js_sys::Reflect::has(&window, &"indexedDB".into()).unwrap_or(false)
 }
@@ -138,19 +138,19 @@ pub async fn get_cache_stats() -> Result<JsValue, JsValue> {
 #[wasm_bindgen]
 pub async fn clear_cache() -> Result<(), JsValue> {
     console::log_1(&"🗑️  Clearing dx-cache...".into());
-    
+
     storage::clear_indexeddb().await?;
     storage::clear_cache_api().await?;
-    
+
     console::log_1(&"✅ Cache cleared".into());
-    
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_config() {
         let config = CacheConfig::default();

@@ -27,19 +27,19 @@ mod allocator;
 #[global_allocator]
 static ALLOC: allocator::BumpAlloc = allocator::BumpAlloc;
 
-use wasm_bindgen::prelude::*;
-use dx_packet::*;
 use core::ptr;
+use dx_packet::*;
+use wasm_bindgen::prelude::*;
 
-mod template_cache;
 mod node_registry;
-mod string_table;
 mod renderer;
+mod string_table;
+mod template_cache;
 
-pub use template_cache::TemplateCache;
 pub use node_registry::NodeRegistry;
-pub use string_table::StringTableReader;
 pub use renderer::Renderer;
+pub use string_table::StringTableReader;
+pub use template_cache::TemplateCache;
 
 // ============================================================================
 // GLOBAL STATE (thread_local for WASM single-thread)
@@ -56,7 +56,7 @@ thread_local! {
 // ============================================================================
 
 /// Initialize the renderer
-/// 
+///
 /// Must be called once before render_stream
 #[wasm_bindgen]
 pub fn init() -> Result<(), u8> {
@@ -84,21 +84,19 @@ pub fn render_stream(data: &[u8]) -> Result<(), u8> {
     if data.len() < HtipHeader::SIZE {
         return Err(ErrorCode::BufferTooSmall as u8);
     }
-    
+
     // Zero-copy header read
-    let header = unsafe { 
-        ptr::read_unaligned(data.as_ptr() as *const HtipHeader) 
-    };
-    
+    let header = unsafe { ptr::read_unaligned(data.as_ptr() as *const HtipHeader) };
+
     // Validate header
     if !header.is_valid() {
         return Err(ErrorCode::InvalidMagic as u8);
     }
-    
+
     RENDERER.with(|r| {
         let mut renderer = r.borrow_mut();
         let renderer = renderer.as_mut().ok_or(ErrorCode::NodeNotFound as u8)?;
-        
+
         renderer.process_stream(data, &header)
     })
 }
@@ -106,12 +104,7 @@ pub fn render_stream(data: &[u8]) -> Result<(), u8> {
 /// Get current node count (for debugging)
 #[wasm_bindgen]
 pub fn get_node_count() -> u32 {
-    RENDERER.with(|r| {
-        r.borrow()
-            .as_ref()
-            .map(|r| r.node_count())
-            .unwrap_or(0)
-    })
+    RENDERER.with(|r| r.borrow().as_ref().map(|r| r.node_count()).unwrap_or(0))
 }
 
 /// Clear all state (for hot reload)
@@ -121,5 +114,7 @@ pub fn reset() {
         *r.borrow_mut() = None;
     });
     // Reset bump allocator to reclaim all memory
-    unsafe { allocator::reset_heap(); }
+    unsafe {
+        allocator::reset_heap();
+    }
 }

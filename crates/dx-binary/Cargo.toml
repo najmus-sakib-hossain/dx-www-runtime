@@ -40,8 +40,3 @@ default = ["client"]
 server = []      # Only for dx build tool
 client = ["dx-core", "dx-morph"]      # Only for dx-www-runtime
 
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-strip = true

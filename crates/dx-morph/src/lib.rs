@@ -15,7 +15,7 @@
 //! - Dirty bits use atomic operations for thread safety
 
 use bytemuck::{Pod, Zeroable};
-use dx_core::{RenderOp, OpCode};
+use dx_core::{OpCode, RenderOp};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // ============================================================================
@@ -32,23 +32,23 @@ impl DirtyMask {
     pub fn new() -> Self {
         Self(AtomicU64::new(0))
     }
-    
+
     /// Mark a field as dirty (thread-safe)
     pub fn mark_dirty(&self, bit: u8) {
         debug_assert!(bit < 64, "Dirty bit out of range");
         self.0.fetch_or(1u64 << bit, Ordering::SeqCst);
     }
-    
+
     /// Check if any fields are dirty
     pub fn is_dirty(&self) -> bool {
         self.0.load(Ordering::SeqCst) != 0
     }
-    
+
     /// Get and clear the dirty mask (atomic swap)
     pub fn take_dirty(&self) -> u64 {
         self.0.swap(0, Ordering::SeqCst)
     }
-    
+
     /// Check if a specific bit is dirty
     pub fn is_bit_dirty(&self, bit: u8) -> bool {
         let mask = self.0.load(Ordering::SeqCst);
@@ -118,31 +118,31 @@ impl BindingMap {
     pub unsafe fn from_static_slice(slice: &'static [u8]) -> Self {
         let (component_id_bytes, rest) = slice.split_at(4);
         let (count_bytes, entries_bytes) = rest.split_at(4);
-        
+
         let component_id = u32::from_le_bytes([
             component_id_bytes[0],
             component_id_bytes[1],
             component_id_bytes[2],
             component_id_bytes[3],
         ]);
-        
+
         let binding_count = u32::from_le_bytes([
             count_bytes[0],
             count_bytes[1],
             count_bytes[2],
             count_bytes[3],
         ]);
-        
+
         // Cast the rest to BindingEntry array
         let entries = bytemuck::cast_slice::<u8, BindingEntry>(entries_bytes);
-        
+
         Self {
             component_id,
             binding_count,
             entries,
         }
     }
-    
+
     /// Get all binding entries for a given dirty bit
     pub fn get_bindings_for_bit(&self, bit: u8) -> impl Iterator<Item = &BindingEntry> {
         self.entries.iter().filter(move |e| e.dirty_bit == bit)
@@ -167,10 +167,10 @@ impl BindingMap {
 pub trait ComponentState {
     /// Get the dirty mask
     fn dirty_mask(&self) -> &DirtyMask;
-    
+
     /// Get the component ID (for looking up BindingMap)
     fn component_id(&self) -> u32;
-    
+
     /// Check if any fields are dirty
     fn is_dirty(&self) -> bool {
         self.dirty_mask().is_dirty()
@@ -192,12 +192,12 @@ impl StatePatcher {
             binding_maps: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Register a binding map for a component
     pub fn register_binding_map(&mut self, map: BindingMap) {
         self.binding_maps.insert(map.component_id, map);
     }
-    
+
     /// Patch the DOM based on dirty bits (O(1) per dirty field)
     ///
     /// Algorithm:
@@ -207,12 +207,12 @@ impl StatePatcher {
     /// 4. Clear dirty_mask
     pub fn patch<S: ComponentState>(&self, state: &S) -> Vec<RenderOp> {
         let mut ops = Vec::new();
-        
+
         let dirty_mask_val = state.dirty_mask().take_dirty();
         if dirty_mask_val == 0 {
             return ops; // Nothing dirty
         }
-        
+
         // Get the binding map for this component
         let component_id = state.component_id();
         let binding_map = match self.binding_maps.get(&component_id) {
@@ -220,44 +220,40 @@ impl StatePatcher {
             None => {
                 #[cfg(target_arch = "wasm32")]
                 web_sys::console::warn_1(
-                    &format!("No binding map for component {}", component_id).into()
+                    &format!("No binding map for component {}", component_id).into(),
                 );
                 return ops;
-            }
+            },
         };
-        
+
         // Iterate through each dirty bit
         for bit in 0..64 {
             if dirty_mask_val & (1u64 << bit) != 0 {
                 // Look up all bindings for this bit
                 for binding in binding_map.get_bindings_for_bit(bit) {
                     let op = match binding.binding_type {
-                        x if x == BindingType::Text as u8 => {
-                            RenderOp::new_update_text(
-                                binding.node_id,
-                                binding.value_offset,
-                                binding.value_length,
-                            )
-                        }
-                        x if x == BindingType::Attribute as u8 => {
-                            RenderOp {
-                                opcode: OpCode::UpdateAttr as u8,
-                                reserved: [0; 3],
-                                arg1: binding.node_id,
-                                arg2: binding.name_id,
-                                arg3: binding.value_offset,
-                            }
-                        }
+                        x if x == BindingType::Text as u8 => RenderOp::new_update_text(
+                            binding.node_id,
+                            binding.value_offset,
+                            binding.value_length,
+                        ),
+                        x if x == BindingType::Attribute as u8 => RenderOp {
+                            opcode: OpCode::UpdateAttr as u8,
+                            reserved: [0; 3],
+                            arg1: binding.node_id,
+                            arg2: binding.name_id,
+                            arg3: binding.value_offset,
+                        },
                         _ => {
                             // TODO: Implement ClassToggle and Style bindings
                             continue;
-                        }
+                        },
                     };
                     ops.push(op);
                 }
             }
         }
-        
+
         ops
     }
 }
@@ -282,7 +278,7 @@ impl CounterState {
     pub const COMPONENT_ID: u32 = 1;
     pub const BIT_COUNT: u8 = 0;
     pub const BIT_STEP: u8 = 1;
-    
+
     pub fn new(count: i32, step: i32) -> Self {
         Self {
             dirty_mask: 0,
@@ -290,14 +286,14 @@ impl CounterState {
             step,
         }
     }
-    
+
     pub fn increment(&mut self) {
         self.count += self.step;
         // Set dirty bit using atomic operations on the raw u64
         let dirty = unsafe { &*((&self.dirty_mask) as *const u64 as *const AtomicU64) };
         dirty.fetch_or(1 << Self::BIT_COUNT, Ordering::Release);
     }
-    
+
     pub fn set_step(&mut self, new_step: i32) {
         self.step = new_step;
         let dirty = unsafe { &*((&self.dirty_mask) as *const u64 as *const AtomicU64) };
@@ -311,7 +307,7 @@ impl ComponentState for CounterState {
         // and we're casting from u64 to AtomicU64 which have the same layout
         unsafe { &*((&self.dirty_mask) as *const u64 as *const DirtyMask) }
     }
-    
+
     fn component_id(&self) -> u32 {
         Self::COMPONENT_ID
     }
@@ -333,22 +329,22 @@ impl StateManager {
             patcher: StatePatcher::new(),
         }
     }
-    
+
     pub fn register_binding_map(&mut self, map: BindingMap) {
         self.patcher.register_binding_map(map);
     }
-    
+
     pub fn patch_and_queue<S: ComponentState>(&self, state: &S) {
         let ops = self.patcher.patch(state);
-        
+
         // Queue ops to dx-dom
         for op in ops {
             #[cfg(target_arch = "wasm32")]
             match op.opcode {
                 x if x == OpCode::UpdateText as u8 => {
                     dx_dom::queue_update_text(op.arg1, op.arg2, op.arg3);
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
     }

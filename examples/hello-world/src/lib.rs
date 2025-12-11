@@ -10,9 +10,9 @@
 //!
 //! **NO VDOM. NO DIFFING. NO JSON. PURE BINARY PROTOCOL.**
 
-use wasm_bindgen::prelude::*;
-use dx_morph::{CounterState, ComponentState};
+use dx_morph::{ComponentState, CounterState};
 use std::cell::RefCell;
+use wasm_bindgen::prelude::*;
 
 pub mod htip_demo;
 
@@ -24,10 +24,10 @@ pub mod htip_demo;
 /// Format: count(u32) | [id(u32) | len(u32) | html_bytes]*
 fn build_template_binary() -> Vec<u8> {
     let mut binary = Vec::new();
-    
+
     // Count: 1 template
     binary.extend_from_slice(&1u32.to_le_bytes());
-    
+
     // Template #1: Counter component
     let template_id = 1u32;
     let html = r#"<div class="counter">
@@ -36,11 +36,11 @@ fn build_template_binary() -> Vec<u8> {
         <button id="decrement-btn">Decrement</button>
     </div>"#;
     let html_bytes = html.as_bytes();
-    
+
     binary.extend_from_slice(&template_id.to_le_bytes());
     binary.extend_from_slice(&(html_bytes.len() as u32).to_le_bytes());
     binary.extend_from_slice(html_bytes);
-    
+
     binary
 }
 
@@ -58,29 +58,30 @@ impl App {
             counter_state: CounterState::new(0, 1),
         }
     }
-    
+
     fn increment(&mut self) {
         self.counter_state.increment();
         log(&format!("Counter: {}", self.counter_state.count));
     }
-    
+
     fn decrement(&mut self) {
         self.counter_state.count -= self.counter_state.step;
         // Mark dirty via atomic operation on dirty_mask
         use std::sync::atomic::{AtomicU64, Ordering};
-        let dirty = unsafe { &*((&self.counter_state.dirty_mask) as *const u64 as *const AtomicU64) };
+        let dirty =
+            unsafe { &*((&self.counter_state.dirty_mask) as *const u64 as *const AtomicU64) };
         dirty.fetch_or(1 << CounterState::BIT_COUNT, Ordering::Release);
         log(&format!("Counter: {}", self.counter_state.count));
     }
-    
+
     fn render(&mut self) {
         if self.counter_state.is_dirty() {
             log("State is dirty, patching DOM...");
-            
+
             // In production, this would call dx-morph's patcher
             // For now, manually queue update
             dx_dom::queue_update_text(1, 0, 0); // Mock text update
-            
+
             // Update the actual DOM element directly (temporary until binding map is wired)
             if let Some(window) = web_sys::window() {
                 if let Some(document) = window.document() {
@@ -89,11 +90,12 @@ impl App {
                     }
                 }
             }
-            
+
             // Clear dirty bits
             // Clear dirty mask
             use std::sync::atomic::{AtomicU64, Ordering};
-            let dirty = unsafe { &*((&self.counter_state.dirty_mask) as *const u64 as *const AtomicU64) };
+            let dirty =
+                unsafe { &*((&self.counter_state.dirty_mask) as *const u64 as *const AtomicU64) };
             dirty.swap(0, Ordering::AcqRel);
         }
     }
@@ -111,9 +113,7 @@ fn with_app<F, R>(f: F) -> R
 where
     F: FnOnce(&mut App) -> R,
 {
-    APP.with(|app_cell| {
-        f(app_cell.borrow_mut().as_mut().expect("App not initialized"))
-    })
+    APP.with(|app_cell| f(app_cell.borrow_mut().as_mut().expect("App not initialized")))
 }
 
 // ============================================================================
@@ -147,26 +147,26 @@ pub fn init_app() {
     // Set panic hook for better error messages
     #[cfg(target_arch = "wasm32")]
     dx_core::panic_hook();
-    
+
     log("=== dx-www Runtime: Hello World Example ===");
     log("Initializing HTIP Engine...");
-    
+
     // 1. Register templates
     let template_binary = build_template_binary();
     dx_dom::register_templates(&template_binary);
     log("✓ Templates registered");
-    
+
     // 2. Initialize app state
     APP.with(|app_cell| {
         *app_cell.borrow_mut() = Some(App::new());
     });
     log("✓ App state initialized");
-    
+
     // 3. Clone template to DOM
     dx_dom::queue_clone(1, 0); // Clone template #1, parent=0 (fragment)
     dx_dom::flush_to_element("#app");
     log("✓ Initial render complete");
-    
+
     // 4. Wire up event listeners (in JS)
     log("✓ Ready! Click the buttons to test dirty-bit patching.");
 }
@@ -174,31 +174,31 @@ pub fn init_app() {
 #[wasm_bindgen]
 pub fn demo_scheduler() {
     log("Starting scheduler demo...");
-    
+
     // Schedule tasks at different priorities
     let immediate_callback = Closure::wrap(Box::new(|| {
         log("  → Immediate priority task executed");
     }) as Box<dyn FnMut()>);
-    
+
     let normal_callback = Closure::wrap(Box::new(|| {
         log("  → Normal priority task executed");
     }) as Box<dyn FnMut()>);
-    
+
     let idle_callback = Closure::wrap(Box::new(|| {
         log("  → Idle priority task executed");
     }) as Box<dyn FnMut()>);
-    
+
     dx_sched::schedule_immediate(immediate_callback.as_ref().unchecked_ref());
     dx_sched::schedule_normal(normal_callback.as_ref().unchecked_ref());
     dx_sched::schedule_idle(idle_callback.as_ref().unchecked_ref());
-    
+
     immediate_callback.forget();
     normal_callback.forget();
     idle_callback.forget();
-    
+
     // Start the scheduler
     dx_sched::start_scheduler();
-    
+
     log("Scheduler started. Check console for task execution logs.");
 }
 

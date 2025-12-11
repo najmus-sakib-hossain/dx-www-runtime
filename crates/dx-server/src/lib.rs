@@ -30,23 +30,19 @@
 //! └──────────────┘
 //! ```
 
-pub mod ssr;
-pub mod stream;
 pub mod delta;
 pub mod handlers;
+pub mod ssr;
+pub mod stream;
 
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
-use tower_http::{
-    compression::CompressionLayer,
-    cors::CorsLayer,
-    trace::TraceLayer,
-};
+use dashmap::DashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use dashmap::DashMap;
+use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
 
 /// Global server state
 #[derive(Clone)]
@@ -75,20 +71,15 @@ pub fn build_router(state: ServerState) -> Router {
         // Static files
         .route("/", get(handlers::serve_index))
         .route("/*path", get(handlers::serve_static))
-        
         // Binary endpoints
         .route("/api/binary/:app", get(handlers::serve_binary))
         .route("/api/delta/:app", get(handlers::serve_delta))
-        
         // SSR endpoint (for SEO)
         .route("/ssr/*path", get(handlers::serve_ssr))
-        
         // Health check
         .route("/health", get(handlers::health_check))
-        
         // Add state
         .with_state(state)
-        
         // Middleware
         .layer(CompressionLayer::new())
         .layer(CorsLayer::permissive())
@@ -98,25 +89,25 @@ pub fn build_router(state: ServerState) -> Router {
 /// Start the dx-server
 pub async fn serve(addr: SocketAddr, state: ServerState) -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("🚀 dx-server starting at {}", addr);
-    
+
     let app = build_router(state);
-    
+
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    
+
     tracing::info!("✨ dx-server ready - The Holographic Server is online");
     tracing::info!("📦 Binary streaming enabled");
     tracing::info!("🔍 SEO inflation ready");
     tracing::info!("⚡ Delta patching active");
-    
+
     axum::serve(listener, app).await?;
-    
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_state_creation() {
         let state = ServerState::new();

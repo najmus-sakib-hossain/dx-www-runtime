@@ -32,7 +32,7 @@ impl StringInterner {
             index: HashMap::new(),
         }
     }
-    
+
     fn intern(&mut self, s: &str) -> u16 {
         if let Some(&idx) = self.index.get(s) {
             return idx;
@@ -42,14 +42,14 @@ impl StringInterner {
         self.index.insert(s.to_string(), idx);
         idx
     }
-    
+
     fn into_strings(self) -> Vec<String> {
         self.strings
     }
 }
 
 /// Generate HTIP binary stream from templates and bindings
-/// 
+///
 /// Returns: (htip_stream: Vec<u8>, string_table: Vec<String>)
 pub fn generate_htip(
     templates: &[Template],
@@ -62,7 +62,7 @@ pub fn generate_htip(
     }
 
     let mut interner = StringInterner::new();
-    
+
     // Build opcodes
     let mut opcodes: Vec<u8> = Vec::new();
     let mut opcode_count: u32 = 0;
@@ -82,7 +82,7 @@ pub fn generate_htip(
     for binding in bindings {
         let text = format!("{{{}}}", binding.expression);
         let string_idx = interner.intern(&text);
-        
+
         let target_id = binding.slot_id as u16 + 1;
         opcodes.push(2); // op_type = PatchText
         opcodes.push(0); // reserved
@@ -106,7 +106,7 @@ pub fn generate_htip(
     let string_table = interner.into_strings();
     let mut string_entries: Vec<u8> = Vec::new();
     let mut string_data: Vec<u8> = Vec::new();
-    
+
     for s in &string_table {
         let offset = string_data.len() as u32;
         let len = s.len() as u16;
@@ -117,7 +117,8 @@ pub fn generate_htip(
     }
 
     // Calculate payload size
-    let payload_size = string_entries.len() + string_data.len() + template_entries.len() + opcodes.len();
+    let payload_size =
+        string_entries.len() + string_data.len() + template_entries.len() + opcodes.len();
 
     // Build header
     let mut stream = Vec::new();

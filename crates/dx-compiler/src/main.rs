@@ -20,11 +20,11 @@ use indicatif::{ProgressBar, ProgressStyle};
 use std::path::PathBuf;
 use std::time::Instant;
 
+mod codegen;
+mod dev_server;
+mod packer;
 mod parser;
 mod splitter;
-mod codegen;
-mod packer;
-mod dev_server;
 
 #[derive(Parser)]
 #[command(name = "dx")]
@@ -94,17 +94,17 @@ async fn main() -> Result<()> {
             skip_optimize,
         } => {
             build_project(entry, output, verbose, skip_optimize).await?;
-        }
+        },
         Commands::Dev {
             entry,
             port,
             verbose,
         } => {
             run_dev_server(entry, port, verbose).await?;
-        }
+        },
         Commands::New { name, template } => {
             create_new_project(name, template)?;
-        }
+        },
     }
 
     Ok(())
@@ -133,8 +133,7 @@ async fn build_project(
 
     // Step 1: Parse
     pb.set_message("Parsing .tsx files...");
-    let parsed_ast = parser::parse_entry(&entry, verbose)
-        .context("Failed to parse entry file")?;
+    let parsed_ast = parser::parse_entry(&entry, verbose).context("Failed to parse entry file")?;
     pb.inc(1);
 
     // Step 2: Tree Shake
@@ -149,7 +148,8 @@ async fn build_project(
 
     // Step 4: Generate HTIP Binary (NO RUST/WASM - pure data!)
     pb.set_message("Generating HTIP binary...");
-    let (htip_stream, _string_table) = codegen::generate_htip(&templates, &bindings, &state_schema, verbose)?;
+    let (htip_stream, _string_table) =
+        codegen::generate_htip(&templates, &bindings, &state_schema, verbose)?;
     pb.inc(1);
 
     // Step 5: Pack .dxb (templates + HTIP stream, NO WASM!)
@@ -162,11 +162,7 @@ async fn build_project(
 
     let elapsed = start_time.elapsed();
     println!();
-    println!(
-        "{} Built in {:.2}s",
-        style("✓").green().bold(),
-        elapsed.as_secs_f32()
-    );
+    println!("{} Built in {:.2}s", style("✓").green().bold(), elapsed.as_secs_f32());
     println!("  {} {}", style("Output:").dim(), output.display());
     println!();
 
@@ -175,10 +171,7 @@ async fn build_project(
 
 /// Run development server with hot-swap
 async fn run_dev_server(entry: PathBuf, port: u16, verbose: bool) -> Result<()> {
-    println!(
-        "{}",
-        style("🔥 Dx Dev Server - Hot Module Replacement").bold().cyan()
-    );
+    println!("{}", style("🔥 Dx Dev Server - Hot Module Replacement").bold().cyan());
     println!();
     println!("  {} http://localhost:{}", style("Local:").dim(), port);
     println!();

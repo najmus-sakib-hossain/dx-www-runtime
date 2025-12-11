@@ -63,7 +63,3 @@ dx-binary = { path = "../dx-binary" }
 # Error handling
 console_error_panic_hook = "0.1"
 
-[profile.release]
-opt-level = "z"     # Optimize for size
-lto = true
-codegen-units = 1

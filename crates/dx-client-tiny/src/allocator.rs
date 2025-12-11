@@ -1,5 +1,5 @@
 //! Ultra-tiny bump allocator for NO_STD WASM
-//! 
+//!
 //! Zero malloc/free overhead - just a pointer increment
 
 use core::alloc::{GlobalAlloc, Layout};
@@ -16,12 +16,12 @@ unsafe impl GlobalAlloc for BumpAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let start = PTR;
         let end = start + layout.size();
-        
+
         // Crash on OOM to prevent memory corruption
         if end > HEAP_SIZE {
             core::arch::wasm32::unreachable();
         }
-        
+
         PTR = end;
         HEAP.as_mut_ptr().add(start)
     }

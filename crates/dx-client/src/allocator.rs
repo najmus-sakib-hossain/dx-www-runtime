@@ -3,7 +3,7 @@ use core::cell::UnsafeCell;
 
 // 1MB Static Heap. Zero cost startup.
 // dx-www design: "Reset the world every frame"
-const HEAP_SIZE: usize = 1024 * 1024; 
+const HEAP_SIZE: usize = 1024 * 1024;
 static mut HEAP: [u8; HEAP_SIZE] = [0; HEAP_SIZE];
 static mut POINTER: usize = 0;
 
@@ -13,12 +13,12 @@ unsafe impl GlobalAlloc for BumpAlloc {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let start = POINTER;
         let end = start + layout.size();
-        
+
         // Security: Crash if OOM to prevent memory corruption
         if end > HEAP_SIZE {
-            core::arch::wasm32::unreachable(); 
+            core::arch::wasm32::unreachable();
         }
-        
+
         POINTER = end;
         HEAP.as_mut_ptr().add(start)
     }
@@ -31,7 +31,7 @@ unsafe impl GlobalAlloc for BumpAlloc {
 }
 
 /// Reset the heap pointer to 0
-/// 
+///
 /// Call this at the start of every HTIP transaction/frame
 pub unsafe fn reset_heap() {
     POINTER = 0;

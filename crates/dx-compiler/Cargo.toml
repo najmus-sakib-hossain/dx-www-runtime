@@ -48,7 +48,3 @@ blake3 = "1.5"
 [dev-dependencies]
 tempfile = "3.8"
 
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1

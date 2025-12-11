@@ -94,21 +94,15 @@ impl HtipWriter {
     pub fn write_class_toggle(&mut self, instance_id: u32, class_name: &str, enabled: bool) {
         let class_name_id = self.add_string(class_name);
 
-        self.operations
-            .push(Operation::PatchClassToggle(PatchClassToggle {
-                instance_id,
-                class_name_id,
-                enabled,
-            }));
+        self.operations.push(Operation::PatchClassToggle(PatchClassToggle {
+            instance_id,
+            class_name_id,
+            enabled,
+        }));
     }
 
     /// Write attach event operation
-    pub fn write_attach_event(
-        &mut self,
-        instance_id: u32,
-        event_type: &str,
-        handler_id: u32,
-    ) {
+    pub fn write_attach_event(&mut self, instance_id: u32, event_type: &str, handler_id: u32) {
         let event_type_id = self.add_string(event_type);
 
         self.operations.push(Operation::AttachEvent(AttachEvent {
@@ -120,9 +114,7 @@ impl HtipWriter {
 
     /// Write remove node operation
     pub fn write_remove_node(&mut self, instance_id: u32) {
-        self.operations.push(Operation::RemoveNode(RemoveNode {
-            instance_id,
-        }));
+        self.operations.push(Operation::RemoveNode(RemoveNode { instance_id }));
     }
 
     /// Write batch start
@@ -132,17 +124,11 @@ impl HtipWriter {
 
     /// Write batch commit
     pub fn write_batch_commit(&mut self, batch_id: u32) {
-        self.operations
-            .push(Operation::BatchCommit(BatchCommit { batch_id }));
+        self.operations.push(Operation::BatchCommit(BatchCommit { batch_id }));
     }
 
     /// Write set property operation
-    pub fn write_set_property(
-        &mut self,
-        instance_id: u32,
-        prop_name: &str,
-        value: PropertyValue,
-    ) {
+    pub fn write_set_property(&mut self, instance_id: u32, prop_name: &str, value: PropertyValue) {
         let prop_name_id = self.add_string(prop_name);
 
         self.operations.push(Operation::SetProperty(SetProperty {

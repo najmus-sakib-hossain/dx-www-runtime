@@ -12,19 +12,19 @@
 //! - `bindings`: A mapping of Slot IDs to Rust expressions
 
 use anyhow::{Result, anyhow};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use regex::Regex;
 
-use crate::parser::{ParsedModule, Component};
+use crate::parser::{Component, ParsedModule};
 
 /// Template definition for static HTML structure
 #[derive(Debug, Clone, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct Template {
     pub id: u32,
-    pub html: String,           // Static HTML with <!--SLOT_N--> markers
-    pub slots: Vec<SlotDef>,    // Metadata for each slot
-    pub hash: String,           // For deduplication
+    pub html: String,        // Static HTML with <!--SLOT_N--> markers
+    pub slots: Vec<SlotDef>, // Metadata for each slot
+    pub hash: String,        // For deduplication
 }
 
 /// Slot definition for dynamic content
@@ -37,10 +37,10 @@ pub struct SlotDef {
 
 #[derive(Debug, Clone, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub enum SlotType {
-    Text,       // Text node content
-    Attribute,  // Element attribute
-    Property,   // DOM property (e.g., checked, value)
-    Event,      // Event listener
+    Text,      // Text node content
+    Attribute, // Element attribute
+    Property,  // DOM property (e.g., checked, value)
+    Event,     // Event listener
 }
 
 /// Binding from Slot to Rust expression
@@ -48,8 +48,8 @@ pub enum SlotType {
 pub struct Binding {
     pub slot_id: u32,
     pub component: String,
-    pub expression: String,     // Rust expression (e.g., "self.count")
-    pub dirty_bit: u8,          // Which bit in dirty_mask
+    pub expression: String, // Rust expression (e.g., "self.count")
+    pub dirty_bit: u8,      // Which bit in dirty_mask
 }
 
 /// State schema for a component
@@ -110,11 +110,7 @@ pub fn split_components(
     }
 
     if verbose {
-        println!(
-            "  Extracted {} templates, {} bindings",
-            templates.len(),
-            bindings.len()
-        );
+        println!("  Extracted {} templates, {} bindings", templates.len(), bindings.len());
     }
 
     Ok((templates, bindings, schemas))
@@ -241,14 +237,9 @@ mod tests {
         let mut next_slot_id = 0;
         let mut dedup = HashMap::new();
 
-        let (template, bindings) = split_jsx(
-            jsx,
-            "TestComponent",
-            &mut next_template_id,
-            &mut next_slot_id,
-            &mut dedup,
-        )
-        .unwrap();
+        let (template, bindings) =
+            split_jsx(jsx, "TestComponent", &mut next_template_id, &mut next_slot_id, &mut dedup)
+                .unwrap();
 
         assert!(template.is_some());
         let template = template.unwrap();

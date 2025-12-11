@@ -2,13 +2,13 @@
 //!
 //! Axum route handlers for dx-server
 
+use crate::{ssr::is_bot, ServerState};
 use axum::{
     body::Body,
     extract::{Path, State},
-    http::{StatusCode, header},
+    http::{header, StatusCode},
     response::{Html, IntoResponse, Response},
 };
-use crate::{ServerState, ssr::is_bot};
 
 /// Serve index.html
 pub async fn serve_index() -> impl IntoResponse {
@@ -16,9 +16,7 @@ pub async fn serve_index() -> impl IntoResponse {
 }
 
 /// Serve static files
-pub async fn serve_static(
-    Path(path): Path<String>,
-) -> impl IntoResponse {
+pub async fn serve_static(Path(path): Path<String>) -> impl IntoResponse {
     // TODO: Implement proper static file serving
     (StatusCode::NOT_FOUND, "Not found")
 }
@@ -29,20 +27,16 @@ pub async fn serve_binary(
     State(state): State<ServerState>,
 ) -> impl IntoResponse {
     match state.binary_cache.get(&app) {
-        Some(binary) => {
-            Response::builder()
-                .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, "application/dx-binary")
-                .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
-                .body(Body::from(binary.clone()))
-                .unwrap()
-        }
-        None => {
-            Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::from("Binary not found"))
-                .unwrap()
-        }
+        Some(binary) => Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/dx-binary")
+            .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
+            .body(Body::from(binary.clone()))
+            .unwrap(),
+        None => Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Body::from("Binary not found"))
+            .unwrap(),
     }
 }
 
@@ -55,7 +49,7 @@ pub async fn serve_delta(
     // 1. Check If-None-Match header for old hash
     // 2. Calculate delta
     // 3. Serve with application/dx-patch MIME type
-    
+
     (StatusCode::NOT_IMPLEMENTED, "Delta patching coming soon")
 }
 
@@ -68,7 +62,7 @@ pub async fn serve_ssr(
     // 1. Check User-Agent
     // 2. If bot, inflate binary to HTML
     // 3. Otherwise, redirect to SPA
-    
+
     Html("<html><body><h1>SSR Placeholder</h1></body></html>")
 }
 
@@ -80,7 +74,7 @@ pub async fn health_check() -> impl IntoResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_health_check() {
         let response = health_check().await;

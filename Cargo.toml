@@ -1,25 +1,39 @@
 [workspace]
 resolver = "2"
 members = [
+    # Core runtime crates
     "crates/dx-core",
     "crates/dx-dom",
     "crates/dx-morph",
     "crates/dx-sched",
-    "crates/dx-compiler",
+    
+    # Binary protocol
     "crates/dx-binary",
-    "crates/dx-server",
-    "crates/dx-cache",
     "crates/dx-packet",
+    
+    # Client runtimes (WASM)
     "crates/dx-client",
     "crates/dx-client-tiny",
+    
+    # Developer tools
+    "crates/dx-compiler",
+    
+    # Server-side (optional)
+    "crates/dx-server",
+    "crates/dx-cache",
+    
+    # Examples
     "examples/hello-world",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-authors = ["dx-www Runtime Team"]
+authors = ["dx-www Runtime Team <team@dx-www.dev>"]
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/dx-www/dx-www-runtime"
+homepage = "https://dx-www.dev"
+documentation = "https://docs.dx-www.dev"
 
 [workspace.dependencies]
 # WASM Interop - Latest Stable

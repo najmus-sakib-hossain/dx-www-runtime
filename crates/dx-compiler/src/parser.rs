@@ -1,18 +1,18 @@
 //! # Parser Module - The Reader
 //!
 //! Reads `.tsx` files and builds a custom Dependency Graph.
-//! 
+//!
 //! NOTE: This is a simplified regex-based parser for MVP.
 //! Production version will use SWC (fastest TS/JS parser in Rust) once
 //! serde compatibility issues are resolved.
-//! 
+//!
 //! Current capabilities:
 //! - Traverse files
 //! - Identify components
 //! - Extract state declarations
 //! - Validate against banned keywords
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -136,17 +136,13 @@ fn parse_single_module(path: &Path, verbose: bool) -> Result<ParsedModule> {
 
     // Extract imports (simplified - looks for import statements)
     let import_regex = Regex::new(r#"import\s+.*?\s+from\s+['"]([^'"]+)['"]"#).unwrap();
-    let imports: Vec<String> = import_regex
-        .captures_iter(&source)
-        .map(|cap| cap[1].to_string())
-        .collect();
+    let imports: Vec<String> =
+        import_regex.captures_iter(&source).map(|cap| cap[1].to_string()).collect();
 
     // Extract exports (simplified)
     let export_regex = Regex::new(r"export\s+(default\s+)?(function|const|class)\s+(\w+)").unwrap();
-    let exports: Vec<String> = export_regex
-        .captures_iter(&source)
-        .map(|cap| cap[3].to_string())
-        .collect();
+    let exports: Vec<String> =
+        export_regex.captures_iter(&source).map(|cap| cap[3].to_string()).collect();
 
     // Extract components (functions starting with uppercase)
     let component_regex = Regex::new(r"(?:function|const)\s+([A-Z]\w*)\s*(?:\(|=)").unwrap();
@@ -171,11 +167,7 @@ fn parse_single_module(path: &Path, verbose: bool) -> Result<ParsedModule> {
     }
 
     if verbose && !components.is_empty() {
-        println!(
-            "    Found {} components in {}",
-            components.len(),
-            path.display()
-        );
+        println!("    Found {} components in {}", components.len(), path.display());
     }
 
     Ok(ParsedModule {
@@ -190,7 +182,10 @@ fn parse_single_module(path: &Path, verbose: bool) -> Result<ParsedModule> {
 /// Extract JSX body from component (simplified)
 fn extract_jsx_body(source: &str, component_name: &str) -> String {
     // Look for return statement with JSX
-    let pattern = format!(r"(?s)(?:function|const)\s+{}\s*.*?return\s*\((.*?)\);", regex::escape(component_name));
+    let pattern = format!(
+        r"(?s)(?:function|const)\s+{}\s*.*?return\s*\((.*?)\);",
+        regex::escape(component_name)
+    );
     if let Ok(regex) = Regex::new(&pattern) {
         if let Some(cap) = regex.captures(source) {
             return cap[1].trim().to_string();
@@ -198,7 +193,10 @@ fn extract_jsx_body(source: &str, component_name: &str) -> String {
     }
 
     // Alternative: return without parentheses
-    let pattern = format!(r"(?s)(?:function|const)\s+{}\s*.*?return\s+(<.*?>)", regex::escape(component_name));
+    let pattern = format!(
+        r"(?s)(?:function|const)\s+{}\s*.*?return\s+(<.*?>)",
+        regex::escape(component_name)
+    );
     if let Ok(regex) = Regex::new(&pattern) {
         if let Some(cap) = regex.captures(source) {
             return cap[1].trim().to_string();

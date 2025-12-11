@@ -28,7 +28,7 @@
 // ============================================================================
 
 /// HTIP Header - first 16 bytes after signature
-/// 
+///
 /// Memory Layout:
 /// ```text
 /// Offset  Size  Field
@@ -63,7 +63,7 @@ impl HtipHeader {
     pub const MAGIC: u16 = 0x4458; // "DX"
     pub const VERSION: u8 = 2;
     pub const SIZE: usize = 16;
-    
+
     /// Validate header magic and version
     #[inline]
     pub fn is_valid(&self) -> bool {
@@ -115,7 +115,7 @@ impl OpType {
 }
 
 /// Fixed-size opcode header (4 bytes)
-/// 
+///
 /// Memory Layout:
 /// ```text
 /// Offset  Size  Field
@@ -123,7 +123,7 @@ impl OpType {
 /// 1       1     reserved (alignment)
 /// 2       2     target_id
 /// ```
-/// 
+///
 /// Payload follows inline based on op_type
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]

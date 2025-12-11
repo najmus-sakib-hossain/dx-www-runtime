@@ -2,8 +2,8 @@
 //!
 //! Multi-layer storage strategy for eternal caching
 
-pub mod indexeddb;
 pub mod cache_api;
+pub mod indexeddb;
 
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;

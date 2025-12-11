@@ -2,11 +2,7 @@
 //!
 //! Full round-trip testing: serialize → deserialize → verify
 
-use dx_binary::{
-    deserializer::HtipStream,
-    opcodes::*,
-    serializer::HtipWriter,
-};
+use dx_binary::{deserializer::HtipStream, opcodes::*, serializer::HtipWriter};
 use ed25519_dalek::SigningKey;
 
 #[test]
@@ -15,13 +11,11 @@ fn test_full_roundtrip() {
     let mut writer = HtipWriter::new();
 
     // Write template
-    let bindings = vec![
-        Binding {
-            slot_id: 0,
-            binding_type: BindingType::Text,
-            path: vec![0],
-        },
-    ];
+    let bindings = vec![Binding {
+        slot_id: 0,
+        binding_type: BindingType::Text,
+        path: vec![0],
+    }];
     writer.write_template(0, "<div><!--SLOT_0--></div>", bindings);
 
     // Write instantiate
@@ -178,11 +172,7 @@ fn test_all_opcode_types() {
     let verifying_key = signing_key.verifying_key();
     let stream = HtipStream::new(&binary, &verifying_key).unwrap();
 
-    let opcodes: Vec<OpcodeV1> = stream
-        .operations()
-        .iter()
-        .map(|op| op.opcode())
-        .collect();
+    let opcodes: Vec<OpcodeV1> = stream.operations().iter().map(|op| op.opcode()).collect();
 
     assert_eq!(opcodes.len(), 11);
     assert!(opcodes.contains(&OpcodeV1::TemplateDef));

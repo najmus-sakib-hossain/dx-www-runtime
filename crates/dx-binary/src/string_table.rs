@@ -8,8 +8,8 @@
 //! - Dynamic strings are added to the table once, referenced by ID
 //! - Result: "className" appears once in 100 KB UI, not 500 times
 
-use std::collections::HashMap;
 use blake3::Hasher;
+use std::collections::HashMap;
 
 /// String table for deduplication
 #[derive(Debug, Clone)]

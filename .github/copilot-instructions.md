@@ -1,5 +1,7 @@
 # Dx-WWW Runtime: System Instructions & Architectural Standards
 
+- Remember to please use /docs folder to store all documentation related files.
+
 ## 1. Project Context & Philosophy
 You are building the **Kernel** of `dx-www`, a revolutionary web runtime that replaces React/Next.js.
 *   **Goal:** January 1, 2026 Release.
@@ -103,5 +105,3 @@ Implement a Cargo Workspace structure. Do not build a monolith.
 When generating code, prioritize raw execution speed and memory compactness over readability. Use `unsafe` blocks where necessary for FFI and casting, but document the safety invariant clearly.
 Assume the target audience is systems engineers.
 Start by scaffolding the `Cargo.toml` workspace and the `dx-core` memory layout.
-
-Remember to please use /docs folder to store all documentation related files.

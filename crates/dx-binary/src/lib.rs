@@ -98,20 +98,20 @@
 //! }
 //! ```
 
+pub mod delta;
+pub mod deserializer;
+pub mod htip_bridge;
 pub mod opcodes;
 pub mod protocol;
 pub mod serializer;
-pub mod deserializer;
+pub mod signature;
 pub mod string_table;
 pub mod template;
-pub mod signature;
-pub mod delta;
-pub mod htip_bridge;
 
+pub use deserializer::HtipStream;
 pub use opcodes::OpcodeV1;
 pub use protocol::{HtipHeader, HtipPayload};
 pub use serializer::HtipWriter;
-pub use deserializer::HtipStream;
 pub use string_table::StringTable;
 pub use template::TemplateDictionary;
 

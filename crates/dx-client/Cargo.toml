@@ -34,10 +34,3 @@ web-sys = { version = "0.3", features = [
 # NO: HtmlElement, Text, DomTokenList, CssStyleDeclaration (use JS for these)
 # Crypto verification happens in JS loader BEFORE WASM loads
 
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
-

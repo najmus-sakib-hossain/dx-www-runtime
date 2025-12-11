@@ -9,9 +9,9 @@
 //! - **Section 3:** WASM Blob (Optimized)
 
 use anyhow::{Context, Result};
-use bincode::{config, Decode, Encode};
-use flate2::write::GzEncoder;
+use bincode::{Decode, Encode, config};
 use flate2::Compression;
+use flate2::write::GzEncoder;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::Write;
@@ -88,16 +88,14 @@ pub fn pack_dxb(
 
     // Serialize to bincode
     let config = config::standard();
-    let artifact_bytes = bincode::encode_to_vec(&artifact, config)
-        .context("Failed to serialize artifact")?;
+    let artifact_bytes =
+        bincode::encode_to_vec(&artifact, config).context("Failed to serialize artifact")?;
 
     // Compress templates section
     let mut compressed_templates = Vec::new();
     {
         let mut encoder = GzEncoder::new(&mut compressed_templates, Compression::best());
-        encoder
-            .write_all(&artifact_bytes)
-            .context("Failed to compress templates")?;
+        encoder.write_all(&artifact_bytes).context("Failed to compress templates")?;
         encoder.finish().context("Failed to finish compression")?;
     }
 
@@ -106,10 +104,8 @@ pub fn pack_dxb(
         .context(format!("Failed to create output file: {}", output_path.display()))?;
 
     // Write header
-    file.write_all(MAGIC_BYTES)
-        .context("Failed to write magic bytes")?;
-    file.write_all(&[FORMAT_VERSION])
-        .context("Failed to write version")?;
+    file.write_all(MAGIC_BYTES).context("Failed to write magic bytes")?;
+    file.write_all(&[FORMAT_VERSION]).context("Failed to write version")?;
 
     // Write compressed artifact size (4 bytes, little endian)
     let artifact_size = compressed_templates.len() as u32;
@@ -121,8 +117,7 @@ pub fn pack_dxb(
         .context("Failed to write compressed artifact")?;
 
     // Write WASM blob
-    file.write_all(&wasm_bytes)
-        .context("Failed to write WASM blob")?;
+    file.write_all(&wasm_bytes).context("Failed to write WASM blob")?;
 
     file.flush().context("Failed to flush file")?;
 
@@ -153,7 +148,7 @@ pub fn pack_dxb(
 }
 
 /// Pack templates and HTIP stream into .dxb file (NO WASM!)
-/// 
+///
 /// This is the new lightweight packer. The output is pure data that
 /// the dx-client runtime interprets. No per-app WASM overhead.
 pub fn pack_dxb_htip(
@@ -176,23 +171,18 @@ pub fn pack_dxb_htip(
         .context(format!("Failed to create output file: {}", output_path.display()))?;
 
     // Write header (simplified for HTIP-only format)
-    file.write_all(MAGIC_BYTES)
-        .context("Failed to write magic bytes")?;
-    file.write_all(&[FORMAT_VERSION])
-        .context("Failed to write version")?;
-    
+    file.write_all(MAGIC_BYTES).context("Failed to write magic bytes")?;
+    file.write_all(&[FORMAT_VERSION]).context("Failed to write version")?;
+
     // Write mode flag: 0x01 = HTIP-only (no WASM)
-    file.write_all(&[0x01])
-        .context("Failed to write mode flag")?;
+    file.write_all(&[0x01]).context("Failed to write mode flag")?;
 
     // Write HTIP stream size (4 bytes, little endian)
     let htip_size = htip_stream.len() as u32;
-    file.write_all(&htip_size.to_le_bytes())
-        .context("Failed to write HTIP size")?;
+    file.write_all(&htip_size.to_le_bytes()).context("Failed to write HTIP size")?;
 
     // Write HTIP stream (already includes header, strings, templates, opcodes)
-    file.write_all(htip_stream)
-        .context("Failed to write HTIP stream")?;
+    file.write_all(htip_stream).context("Failed to write HTIP stream")?;
 
     file.flush().context("Failed to flush file")?;
 
@@ -201,12 +191,12 @@ pub fn pack_dxb_htip(
     if verbose {
         println!("    HTIP stream size: {} bytes", htip_size);
         println!("    Total .dxb size: {} bytes", total_size);
-        
+
         // Debug: write separate files
         let htip_path = output_dir.join("app.htip");
         fs::write(&htip_path, htip_stream)?;
         println!("    Debug HTIP: {}", htip_path.display());
-        
+
         let templates_path = output_dir.join("templates.json");
         let templates_json = serde_json::to_string_pretty(templates)?;
         fs::write(&templates_path, templates_json)?;
@@ -230,10 +220,7 @@ pub fn unpack_dxb(dxb_path: &Path) -> Result<(DxbArtifact, Vec<u8>)> {
     // Check version
     let version = bytes[2];
     if version != FORMAT_VERSION {
-        return Err(anyhow::anyhow!(
-            "Unsupported .dxb version: {}",
-            version
-        ));
+        return Err(anyhow::anyhow!("Unsupported .dxb version: {}", version));
     }
 
     // Read artifact size
@@ -253,9 +240,8 @@ pub fn unpack_dxb(dxb_path: &Path) -> Result<(DxbArtifact, Vec<u8>)> {
 
     // Deserialize artifact
     let config = config::standard();
-    let (artifact, _): (DxbArtifact, usize) =
-        bincode::decode_from_slice(&decompressed, config)
-            .context("Failed to deserialize artifact")?;
+    let (artifact, _): (DxbArtifact, usize) = bincode::decode_from_slice(&decompressed, config)
+        .context("Failed to deserialize artifact")?;
 
     // Extract WASM
     let wasm_bytes = bytes[7 + artifact_size..].to_vec();

@@ -86,10 +86,7 @@ impl HtipStream {
 
     /// Get template by ID
     pub fn get_template(&self, id: u16) -> Option<&crate::opcodes::TemplateDef> {
-        self.payload
-            .templates
-            .iter()
-            .find(|t| t.id == id)
+        self.payload.templates.iter().find(|t| t.id == id)
     }
 
     /// Is signature verified
@@ -117,10 +114,7 @@ pub struct BatchProcessor {
 impl BatchProcessor {
     /// Create new batch processor
     pub fn new(stream: HtipStream, batch_size: usize) -> Self {
-        Self {
-            stream,
-            batch_size,
-        }
+        Self { stream, batch_size }
     }
 
     /// Process next batch (returns indices instead of references to avoid lifetime issues)
@@ -212,10 +206,7 @@ mod tests {
 
         let result = HtipStream::new(&binary, &verifying_key);
         assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            DxBinaryError::SignatureVerificationFailed
-        ));
+        assert!(matches!(result.unwrap_err(), DxBinaryError::SignatureVerificationFailed));
     }
 
     #[test]

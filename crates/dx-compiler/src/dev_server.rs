@@ -28,9 +28,7 @@ pub async fn start(entry: PathBuf, port: u16, verbose: bool) -> Result<()> {
         .context("Failed to create file watcher")?;
 
     // Watch the source directory
-    let watch_dir = entry
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."));
+    let watch_dir = entry.parent().unwrap_or_else(|| std::path::Path::new("."));
     watcher
         .watch(watch_dir, RecursiveMode::Recursive)
         .context("Failed to watch directory")?;
@@ -87,9 +85,10 @@ async fn perform_build(entry: &PathBuf, verbose: bool) -> Result<BuildArtifact> 
     let parsed = crate::parser::parse_entry(entry, verbose)?;
     let shaken = crate::parser::tree_shake(parsed, verbose)?;
     let (templates, bindings, schemas) = crate::splitter::split_components(shaken, verbose)?;
-    
+
     // Use new HTIP binary generation (no Rust/WASM compilation!)
-    let (htip_stream, _strings) = crate::codegen::generate_htip(&templates, &bindings, &schemas, verbose)?;
+    let (htip_stream, _strings) =
+        crate::codegen::generate_htip(&templates, &bindings, &schemas, verbose)?;
     let hash = blake3::hash(&htip_stream).to_hex().to_string();
 
     Ok(BuildArtifact {
@@ -120,7 +119,7 @@ fn should_rebuild(event: &Event) -> bool {
                     .map(|ext| matches!(ext, "tsx" | "ts" | "jsx" | "js" | "dx"))
                     .unwrap_or(false)
             })
-        }
+        },
         _ => false,
     }
 }
@@ -134,11 +133,7 @@ fn calculate_delta(old: &BuildArtifact, new: &BuildArtifact) -> String {
     let mut changes = Vec::new();
 
     if old.templates.len() != new.templates.len() {
-        changes.push(format!(
-            "templates: {} -> {}",
-            old.templates.len(),
-            new.templates.len()
-        ));
+        changes.push(format!("templates: {} -> {}", old.templates.len(), new.templates.len()));
     } else {
         let template_changes = old
             .templates
@@ -152,11 +147,7 @@ fn calculate_delta(old: &BuildArtifact, new: &BuildArtifact) -> String {
     }
 
     if old.htip_stream.len() != new.htip_stream.len() {
-        changes.push(format!(
-            "htip: {} -> {} bytes",
-            old.htip_stream.len(),
-            new.htip_stream.len()
-        ));
+        changes.push(format!("htip: {} -> {} bytes", old.htip_stream.len(), new.htip_stream.len()));
     }
 
     if changes.is_empty() {
