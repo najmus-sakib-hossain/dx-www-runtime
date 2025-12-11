@@ -735,3 +735,17 @@ Welcome to the future. 🚀
 ---
 
 Built with ⚡ by the dx-www team
+
+1. Nextjs
+2. React
+3. Svelte
+4. Solidjs
+5. Laravel
+6. Django
+7. Flask
+8. FastAPI
+9. Angular
+10. Vue.js
+11. Actix web
+12. Rocket
+13. Nuxt.js
