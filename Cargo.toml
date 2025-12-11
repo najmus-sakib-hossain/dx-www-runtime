@@ -9,6 +9,8 @@ members = [
     "crates/dx-binary",
     "crates/dx-server",
     "crates/dx-cache",
+    "crates/dx-packet",
+    "crates/dx-client",
     "examples/hello-world",
 ]
 
@@ -54,3 +56,17 @@ dx-morph = { path = "crates/dx-morph" }
 dx-sched = { path = "crates/dx-sched" }
 dx-compiler = { path = "crates/dx-compiler" }
 dx-binary = { path = "crates/dx-binary" }
+dx-packet = { path = "crates/dx-packet" }
+dx-client = { path = "crates/dx-client" }
+
+# ============================================================================
+# AGGRESSIVE SIZE OPTIMIZATION (9KB TARGET)
+# ============================================================================
+
+[profile.release]
+opt-level = "z"       # Optimize for size (not speed)
+lto = true            # Link Time Optimization (removes unused code)
+codegen-units = 1     # Slower build, smaller binary
+panic = "abort"       # Remove stack unwinding (~20KB savings)
+strip = true          # Strip symbols
+
