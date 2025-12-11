@@ -5,6 +5,7 @@ members = [
     "crates/dx-dom",
     "crates/dx-morph",
     "crates/dx-sched",
+    "crates/dx-compiler",
     "examples/hello-world",
 ]
 

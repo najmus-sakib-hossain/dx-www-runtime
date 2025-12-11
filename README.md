@@ -214,6 +214,39 @@ web-sys = { version = "0.3", features = [
 
 ---
 
+### 🏭 `dx-compiler` - The Factory
+**Purpose:** Transpiler-to-Binary Pipeline (TypeScript → `.dxb` artifacts)
+
+**Key Features:**
+- **SWC Parser** - Fastest TS/JS parser (Rust-based)
+- **Holographic Splitter** - Separates static HTML from dynamic logic
+- **Rust Codegen** - Generates WASM-ready Rust code
+- **Binary Packer** - Creates `.dxb` format with gzip compression
+- **Hot Module Replacement** - < 200ms rebuild on file save
+
+**CLI Commands:**
+```bash
+dx build --entry src/main.dx --output dist/
+dx dev --entry src/main.dx --port 3000
+dx new my-app --template counter
+```
+
+**Dependencies:**
+```toml
+clap = "4.5"              # CLI framework
+regex = "1.10"            # Pattern matching (MVP)
+bincode = "2.0.0-rc.3"    # Binary serialization
+flate2 = "1.0"            # Gzip compression
+tokio = "1.36"            # Async runtime
+notify = "6.1"            # File watching
+```
+
+**Documentation:** See [docs/COMPILER.md](docs/COMPILER.md)
+
+**Code Stats:** ~1800 lines of production Rust
+
+---
+
 ## 🔑 Key Innovations
 
 ### 1️⃣ Template Instantiation (Not HTML Parsing)
