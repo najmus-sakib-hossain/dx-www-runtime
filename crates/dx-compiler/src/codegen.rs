@@ -135,11 +135,14 @@ fn generate_component_struct(schema: &StateSchema, verbose: bool) -> Result<Toke
         .iter()
         .map(|f| {
             // Parse initial values
-            if f.type_name == "string" {
+            let val_str = if f.type_name == "string" {
                 format!("String::from(\"{}\")", f.initial_value)
             } else {
                 f.initial_value.clone()
-            }
+            };
+            
+            use std::str::FromStr;
+            TokenStream::from_str(&val_str).unwrap_or_else(|_| quote!(0))
         })
         .collect();
 
@@ -240,15 +243,24 @@ pub fn compile_to_wasm(rust_code: String, skip_optimize: bool, verbose: bool) ->
         println!("  Compiling to WASM...");
     }
 
-    // Create temporary directory for compilation
-    let temp_dir = std::env::temp_dir().join(format!("dx-compile-{}", std::process::id()));
-    fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
+    // Use fixed debug directory for easier inspection
+    let temp_dir = std::env::current_dir()?.join("debug_out");
+    if fs::exists(&temp_dir)? {
+        fs::remove_dir_all(&temp_dir)?;
+    }
+    fs::create_dir_all(&temp_dir).context("Failed to create debug directory")?;
+
+    if verbose {
+        println!("    Debug build dir: {}", temp_dir.display());
+    }
 
     // Write Cargo.toml
     let cargo_toml = r#"[package]
 name = "dx-generated"
 version = "0.1.0"
 edition = "2021"
+
+[workspace]
 
 [lib]
 crate-type = ["cdylib"]
@@ -260,6 +272,9 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlE
 [profile.release]
 opt-level = "z"
 lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
 "#;
 
     fs::write(temp_dir.join("Cargo.toml"), cargo_toml)?;

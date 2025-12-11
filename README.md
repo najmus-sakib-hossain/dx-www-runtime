@@ -57,10 +57,12 @@ Current frameworks suffer from fundamental performance bottlenecks:
 ### Bundle Size
 | Framework | Size | Notes |
 |-----------|------|-------|
-| **dx-www** | **112 KB** | Pure WASM binary |
-| React 18 | 140 KB | + runtime overhead |
+| **dx-www** | **~15 KB\*** | Universal Runtime (22KB unoptimized) |
+| Svelte 5 | 20 KB | Hello World only (scales w/ code) |
+| React 18 | 140 KB | Runtime + VDOM overhead |
 | Next.js 14 | 200+ KB | + hydration code |
-| Svelte 5 | 20 KB | Minimal runtime |
+
+> \* **Size Note:** Current unoptimized build is 22.3 KB. With standard `wasm-opt -Oz`, target is **~15 KB**.
 
 ### Initial Load Time
 | Framework | Time | Method |
@@ -751,10 +753,10 @@ Built with ⚡ by the dx-www team
 
 | Framework | Bundle Size | Initial Load | 1000 Updates | Memory (10K items) | Architecture | Speed vs dx-www |
 |-----------|-------------|--------------|--------------|--------------------|--------------|----|
-| **dx-www** | **112 KB** | **~5ms** | **4.90ms** ⚡ | **~5 MB** | Binary Protocol + WASM | **1x (baseline)** |
+| **dx-www** | **~15 KB\*** | **~5ms** | **4.90ms** ⚡ | **~5 MB** | Binary Protocol + WASM | **1x (baseline)** |
 | **React 18** | 140 KB | ~50ms | ~16ms | ~15 MB | Virtual DOM + Fiber | **3.3x slower** |
 | **Next.js 14** | 200+ KB | ~100ms | ~18ms | ~20 MB | React + SSR/Hydration | **3.7x slower** |
-| **Svelte 5** | 20 KB | ~15ms | ~8ms | ~8 MB | Compiled Components | **1.6x slower** |
+| **Svelte 5** | 20 KB+ | ~15ms | ~8ms | ~8 MB | Compiled Components | **1.6x slower** |
 | **Solid.js** | 23 KB | ~10ms | ~3ms | ~6 MB | Fine-grained Reactivity | **0.6x (faster!)** |
 | **Angular 17** | 180 KB | ~80ms | ~20ms | ~18 MB | Zone.js + Change Detection | **4.1x slower** |
 | **Vue.js 3** | 120 KB | ~40ms | ~12ms | ~12 MB | Virtual DOM + Reactivity | **2.4x slower** |

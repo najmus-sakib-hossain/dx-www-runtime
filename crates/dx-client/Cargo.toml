@@ -18,6 +18,8 @@ js-sys = "0.3"
 
 # Tiny allocator (~1KB vs ~10KB for std allocator)
 wee_alloc = "0.4"
+# Tiny allocator replaced by manual Bump Pointer (allocator.rs)
+# wee_alloc = "0.4"
 
 # DOM access (ABSOLUTE MINIMUM features)
 # Strategy: Use Node for everything possible, Element only when required

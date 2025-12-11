@@ -17,26 +17,6 @@
 //! - Ed25519 signature is verified by JavaScript BEFORE this code runs
 //! - The `ptr` passed to `render_stream` is ALREADY VERIFIED
 //! - No crypto in WASM = 0 bytes of crypto bloat
-//!
-//! ## Usage
-//!
-//! ```javascript
-//! // JS Loader (20 lines, runs before WASM)
-//! async function boot(url, publicKey) {
-//!     const response = await fetch(url);
-//!     const buffer = await response.arrayBuffer();
-//!     
-//!     // Verify BEFORE loading WASM
-//!     const sig = buffer.slice(0, 64);
-//!     const payload = buffer.slice(64);
-//!     const valid = await crypto.subtle.verify("Ed25519", publicKey, sig, payload);
-//!     if (!valid) throw "Invalid signature";
-//!     
-//!     // Safe to render
-//!     const { render_stream } = await init();
-//!     render_stream(new Uint8Array(payload));
-//! }
-//! ```
 
 // ============================================================================
 // TINY ALLOCATOR (~1KB vs ~10KB for std allocator)
