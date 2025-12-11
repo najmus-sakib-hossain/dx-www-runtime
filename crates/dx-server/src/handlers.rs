@@ -77,6 +77,78 @@ fn serve_spa_shell() -> Html<&'static str> {
     Html(include_str!("../../../examples/hello-world/demo.html"))
 }
 
+/// Stream binary artifacts (Day 16: The Binary Streamer)
+///
+/// # The Waterfall Killer
+///
+/// Traditional loading is sequential:
+/// 1. Download → 2. Parse → 3. Execute
+///
+/// Streaming loading is parallel:
+/// - Chunk 1 (Layout) → Client creates templates while downloading
+/// - Chunk 2 (State) → Client allocates memory while downloading
+/// - Chunk 3 (WASM) → Browser compiles while downloading
+///
+/// Result: Zero blocking time. Execution starts before download completes.
+///
+/// # Example
+/// ```bash
+/// curl --no-buffer http://localhost:3000/stream/app | xxd | head -50
+/// ```
+pub async fn serve_binary_stream(
+    State(state): State<ServerState>,
+    axum::extract::Path(app_id): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    use axum::body::Body;
+    use axum::http::header;
+
+    tracing::info!("📡 Streaming binary for app: {}", app_id);
+
+    // Load artifacts from cache
+    let layout_bin = state
+        .binary_cache
+        .get("layout.bin")
+        .map(|entry| entry.value().clone())
+        .unwrap_or_else(|| {
+            tracing::warn!("⚠️ layout.bin not in cache, generating mock");
+            vec![0u8; 100] // Mock layout
+        });
+
+    let wasm_bin = state
+        .binary_cache
+        .get("app.wasm")
+        .map(|entry| entry.value().clone())
+        .unwrap_or_else(|| {
+            tracing::warn!("⚠️ app.wasm not in cache, using empty");
+            vec![]
+        });
+
+    // Create mock artifact for header
+    let artifact = dx_packet::DxbArtifact {
+        version: 1,
+        capabilities: dx_packet::CapabilitiesManifest::default(),
+        templates: vec![],
+        wasm_size: wasm_bin.len() as u32,
+    };
+
+    // Create streaming body
+    let stream = crate::stream::create_stream(&artifact, layout_bin, wasm_bin);
+    let body = Body::from_stream(stream);
+
+    // Build response with streaming headers
+    let response = axum::response::Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/octet-stream")
+        .header(header::CACHE_CONTROL, "public, max-age=31536000") // Cache for 1 year
+        .header("X-Dx-Version", "1.0")
+        .header("X-Dx-Stream", "chunked")
+        .body(body)
+        .unwrap();
+
+    tracing::debug!("✅ Stream initialized");
+    response
+}
+
 /// Health check endpoint
 pub async fn health_check() -> impl IntoResponse {
     (StatusCode::OK, "dx-server is healthy")

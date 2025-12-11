@@ -72,12 +72,11 @@ impl ServerState {
     pub fn load_artifacts(&self, path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("📦 Loading artifacts from {}", path.display());
 
-        // Load layout.bin (Templates)
-        let layout_path = path.join("layout.bin");
-        if layout_path.exists() {
-            let bytes = std::fs::read(&layout_path)?;
-            let config = bincode::config::standard();
-            let templates: Vec<Template> = bincode::decode_from_slice(&bytes, config)?.0;
+        // Load templates.json (parsed templates)
+        let templates_path = path.join("templates.json");
+        if templates_path.exists() {
+            let json_str = std::fs::read_to_string(&templates_path)?;
+            let templates: Vec<Template> = serde_json::from_str(&json_str)?;
 
             tracing::info!("  ✓ Loaded {} templates", templates.len());
 
@@ -86,7 +85,15 @@ impl ServerState {
                 self.template_cache.insert(template.id, template);
             }
         } else {
-            tracing::warn!("  ⚠️ layout.bin not found");
+            tracing::warn!("  ⚠️ templates.json not found");
+        }
+
+        // Load layout.bin (raw binary for streaming)
+        let layout_path = path.join("layout.bin");
+        if layout_path.exists() {
+            let bytes = std::fs::read(&layout_path)?;
+            self.binary_cache.insert("layout.bin".to_string(), bytes);
+            tracing::debug!("  ✓ Cached layout.bin ({} bytes)", self.binary_cache.get("layout.bin").unwrap().len());
         }
 
         // Load app.wasm
@@ -116,8 +123,9 @@ pub fn build_router(state: ServerState) -> Router {
         .route("/", get(handlers::serve_index))
         // Health check
         .route("/health", get(handlers::health_check))
-        // Binary endpoints (future)
-        // .route("/api/binary/:app", get(handlers::serve_binary))
+        // Binary streaming endpoint (Day 16: The Binary Streamer)
+        .route("/stream/:app_id", get(handlers::serve_binary_stream))
+        // Delta endpoints (Day 17)
         // .route("/api/delta/:app", get(handlers::serve_delta))
         // Add state
         .with_state(state)

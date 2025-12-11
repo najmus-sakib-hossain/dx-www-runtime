@@ -339,6 +339,83 @@ pub struct DxbArtifact {
     pub wasm_size: u32,
 }
 
+// ============================================================================
+// STREAMING PROTOCOL (Day 16)
+// ============================================================================
+
+/// Binary streaming chunk types for progressive loading
+/// Enables client to start execution before full download completes
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChunkType {
+    /// Header: Magic bytes + Version + Signature (64 bytes)
+    Header = 0x01,
+    /// Layout: Template dictionary (layout.bin)
+    Layout = 0x02,
+    /// State: Initial state data (state.bin)
+    State = 0x03,
+    /// Wasm: Runtime logic (logic.wasm)
+    Wasm = 0x04,
+    /// End of stream marker
+    Eof = 0xFF,
+}
+
+impl ChunkType {
+    pub fn from_u8(value: u8) -> Option<Self> {
+        match value {
+            0x01 => Some(ChunkType::Header),
+            0x02 => Some(ChunkType::Layout),
+            0x03 => Some(ChunkType::State),
+            0x04 => Some(ChunkType::Wasm),
+            0xFF => Some(ChunkType::Eof),
+            _ => None,
+        }
+    }
+}
+
+/// Chunk header for binary streaming
+/// Total size: 5 bytes (1 type + 4 length)
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct ChunkHeader {
+    /// Type of chunk (see ChunkType enum)
+    pub chunk_type: u8,
+    /// Length of data following this header (Little Endian)
+    pub length: u32,
+}
+
+impl ChunkHeader {
+    pub fn new(chunk_type: ChunkType, length: u32) -> Self {
+        Self {
+            chunk_type: chunk_type as u8,
+            length,
+        }
+    }
+
+    /// Serialize header to bytes (5 bytes)
+    pub fn to_bytes(&self) -> [u8; 5] {
+        let mut bytes = [0u8; 5];
+        bytes[0] = self.chunk_type;
+        bytes[1..5].copy_from_slice(&self.length.to_le_bytes());
+        bytes
+    }
+
+    /// Deserialize header from bytes
+    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() < 5 {
+            return None;
+        }
+        Some(Self {
+            chunk_type: bytes[0],
+            length: u32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]),
+        })
+    }
+}
+
+// ============================================================================
+// SECURITY & CAPABILITIES
+// ============================================================================
+
 /// Capabilities manifest for security
 #[cfg_attr(
     feature = "std",
