@@ -11,6 +11,7 @@ members = [
     "crates/dx-cache",
     "crates/dx-packet",
     "crates/dx-client",
+    "crates/dx-client-tiny",
     "examples/hello-world",
 ]
 
