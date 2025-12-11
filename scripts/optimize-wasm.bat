@@ -54,8 +54,8 @@ set /a ORIGINAL_KB=ORIGINAL_SIZE / 1024
 echo 📊 Original size: %ORIGINAL_KB% KB
 echo 🚀 Optimizing with wasm-opt...
 
-REM Run wasm-opt with maximum optimization
-npx wasm-opt -Oz --enable-bulk-memory --enable-sign-ext --enable-mutable-globals "%INPUT_FILE%" -o "%OUTPUT_FILE%"
+REM Run wasm-opt with MAXIMUM optimization (enhanced for sub-15KB target)
+npx wasm-opt -Oz --enable-bulk-memory --enable-sign-ext --enable-mutable-globals --dce --duplicate-function-elimination --coalesce-locals --code-folding "%INPUT_FILE%" -o "%OUTPUT_FILE%"
 if %ERRORLEVEL% NEQ 0 (
     echo ❌ Optimization failed
     exit /b 1

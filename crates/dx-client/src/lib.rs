@@ -19,13 +19,13 @@
 //! - No crypto in WASM = 0 bytes of crypto bloat
 
 // ============================================================================
-// TINY ALLOCATOR (~1KB vs ~10KB for std allocator)
+// ULTRA-TINY ALLOCATOR (~100 bytes vs ~1KB for wee_alloc)
 // ============================================================================
 
-extern crate wee_alloc;
+mod allocator;
 
 #[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+static ALLOC: allocator::BumpAlloc = allocator::BumpAlloc;
 
 use wasm_bindgen::prelude::*;
 use dx_packet::*;
@@ -120,4 +120,6 @@ pub fn reset() {
     RENDERER.with(|r| {
         *r.borrow_mut() = None;
     });
+    // Reset bump allocator to reclaim all memory
+    unsafe { allocator::reset_heap(); }
 }
