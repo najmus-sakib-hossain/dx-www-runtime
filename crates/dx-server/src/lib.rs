@@ -36,10 +36,11 @@ pub mod ssr;
 pub mod stream;
 
 use axum::{
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use dashmap::DashMap;
+use dx_packet::Template;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLayer};
@@ -49,8 +50,8 @@ use tower_http::{compression::CompressionLayer, cors::CorsLayer, trace::TraceLay
 pub struct ServerState {
     /// Binary snapshot cache (path -> bytes)
     pub binary_cache: Arc<DashMap<String, Vec<u8>>>,
-    /// Template cache (id -> html)
-    pub template_cache: Arc<DashMap<u32, String>>,
+    /// Template cache (id -> Template) - stores full Template structs
+    pub template_cache: Arc<DashMap<u32, Template>>,
     /// Version hashes for delta patching
     pub version_cache: Arc<DashMap<String, String>>,
 }
@@ -73,13 +74,13 @@ impl ServerState {
         if layout_path.exists() {
             let bytes = std::fs::read(&layout_path)?;
             let config = bincode::config::standard();
-            let templates: Vec<dx_packet::Template> = bincode::decode_from_slice(&bytes, config)?.0;
+            let templates: Vec<Template> = bincode::decode_from_slice(&bytes, config)?.0;
             
             tracing::info!("  ✓ Loaded {} templates", templates.len());
             
-            // Populate cache
+            // Populate cache with full Template structs
             for template in templates {
-                self.template_cache.insert(template.id, template.html);
+                self.template_cache.insert(template.id, template);
             }
         } else {
             tracing::warn!("  ⚠️ layout.bin not found");
@@ -96,21 +97,25 @@ impl ServerState {
 
         Ok(())
     }
+
+    /// Register a template manually (for testing or dynamic loading)
+    pub fn register_template(&self, template: Template) {
+        let id = template.id;
+        self.template_cache.insert(id, template);
+        tracing::debug!("📄 Registered template {}", id);
+    }
 }
 
 /// Build the Axum router with all routes
 pub fn build_router(state: ServerState) -> Router {
     Router::new()
-        // Static files (catch-all)
-        .route("/", get(handlers::serve_static))
-        .route("/*path", get(handlers::serve_static))
-        // Binary endpoints
-        .route("/api/binary/:app", get(handlers::serve_binary))
-        .route("/api/delta/:app", get(handlers::serve_delta))
-        // SSR endpoint (for SEO)
-        .route("/ssr/*path", get(handlers::serve_ssr))
+        // Root index (supports bot detection + SSR)
+        .route("/", get(handlers::serve_index))
         // Health check
         .route("/health", get(handlers::health_check))
+        // Binary endpoints (future)
+        // .route("/api/binary/:app", get(handlers::serve_binary))
+        // .route("/api/delta/:app", get(handlers::serve_delta))
         // Add state
         .with_state(state)
         // Middleware

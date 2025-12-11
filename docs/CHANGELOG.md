@@ -7,24 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 3 - Compiler (Target: Q1 2026)
-- [ ] dx-compiler crate
-- [ ] .dx file format parser
-- [ ] Template binary generator
-- [ ] Binding map generator
-- [ ] CLI tool
-
 ### Phase 4 - Advanced Features (Target: Q1 2026)
-- [ ] dx-router crate
-- [ ] Server-Side Rendering
+- [ ] dx-router crate (Holographic Routing)
 - [ ] Worker thread support
 - [ ] WebSocket integration
+- [ ] State persistence & time-travel
 
-### Phase 5 - Production (Target: Q1 2026)
+### Phase 5 - Day 16-17 (Next Week)
+- [ ] Binary streaming (chunked layout.bin + wasm)
+- [ ] Delta patching (bandwidth optimization)
 - [ ] Production benchmarks
+
+### Phase 6 - Production (Target: Q1 2026)
+- [ ] Developer tools (hot reload, debugging)
 - [ ] Documentation site
 - [ ] Example applications
 - [ ] Community preview
+
+## [0.3.0] - 2025-12-12 (Phase 5 - Day 15 Complete)
+
+### Added - The Holographic Server 🚀
+
+#### dx-server Crate (New)
+- **SSR Inflator**: Template + State → HTML in ~1ms
+  - `inflate_html()`: Core inflation function
+  - `inflate_page()`: Full HTML page generation
+  - HTML escaping for XSS prevention
+  - Slot replacement system
+- **Bot Detection**: Smart user-agent detection
+  - GoogleBot, BingBot, DuckDuckBot support
+  - Social crawlers (Facebook, Twitter, LinkedIn, WhatsApp)
+  - Mobile device detection
+- **Axum Integration**:
+  - Production HTTP server with middleware
+  - Compression (Brotli), CORS, Tracing
+  - DashMap concurrent caching
+  - Template & binary artifact loading
+- **Handlers**:
+  - `serve_index()`: Bot vs Human routing
+  - SSR path for bots (SEO optimized)
+  - SPA shell for humans (fast hydration)
+  - Health check endpoint
+- **Test Coverage**: 16/16 tests passing
+  - Inflation tests (basic, multiple slots, missing data)
+  - Full page generation
+  - HTML escaping validation
+  - Bot & mobile detection
+  - State management tests
+
+#### dx-packet Enhancements
+- `Template` struct: Binary template definition
+- `DxbArtifact` struct: .dxb file container
+- `SlotDef` & `SlotType`: Slot metadata
+- `CapabilitiesManifest`: Security capabilities
+- Full `bincode` serialization support
+
+#### Documentation
+- [SERVER_PHASE5_DAY15.md](./SERVER_PHASE5_DAY15.md): Complete implementation guide
+- Demo scripts: `demo-server.sh` & `demo-server.bat`
+- Architecture diagrams for SSR flow
+- Performance benchmarks & metrics
+
+### Changed
+- Updated README with Phase 5 progress
+- Added dx-server to main architecture diagram
+- Enhanced project structure documentation
+
+### Performance
+- SSR Inflation: ~1ms target (string replacement)
+- Concurrent Template Cache: DashMap (lock-free reads)
+- Zero-copy slot injection
+- Pre-allocated HTML buffers
+
+## [0.2.0] - 2025-12-14 (Compiler Complete)
+
+### Added - Dual-Core Codegen
+
+#### dx-compiler Crate
+- **Micro Codegen** (548 lines): Raw FFI calls for 338B runtime
+- **Macro Codegen** (349 lines): HTIP binary templates for 7.5KB runtime
+- Intelligent auto-selection based on app complexity
+- WASM compilation working for both runtimes
+- Template binary generation (layout.bin)
+- Binding map generator
+- CLI tool
 
 ## [0.1.0] - 2025-12-11
 

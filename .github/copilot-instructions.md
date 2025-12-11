@@ -1,6 +1,8 @@
 # Dx-WWW Runtime: System Instructions & Architectural Standards
 
 - Remember to please use /docs folder to store all documentation related files.
+- Please study this codebaase and make sure that its properly formatted and linted and the folder structure is correct and professionally organized. And no empty or useless files or folders are present!!!
+- Always use latest crates versions.
 
 ## 1. Project Context & Philosophy
 You are building the **Kernel** of `dx-www`, a revolutionary web runtime that replaces React/Next.js.
