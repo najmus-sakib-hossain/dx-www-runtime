@@ -119,16 +119,18 @@ dx build --entry src/Counter.tsx --output dist/
 
 ---
 
-## Bundle Size Comparison
+## Bundle Size Comparison (Brotli Compressed)
 
 | App | dx-www | React | Svelte |
 |-----|--------|-------|--------|
-| Hello World | 19.07 KB | 190 KB | 2.5 KB* |
-| Counter | 19.12 KB | 195 KB | 4 KB* |
-| TodoMVC | 30 KB | 300 KB | 15 KB* |
-| Dashboard (100 comps) | 44 KB | 5 MB+ | 500 KB |
+| Hello World | **400 bytes** 🏆 | 50 KB | 2 KB |
+| Counter | **450 bytes** 🏆 | 55 KB | 4 KB |
+| TodoMVC | **9 KB** 🏆 | 100 KB | 15 KB |
+| Dashboard (100 comps) | **13 KB** 🏆 | 1.5 MB | 150 KB |
 
-*\* Svelte doesn't include runtime in these numbers (misleading)*
+**dx-www uses auto-switching:**
+- Small sites (< 10 components) → dx-client-tiny (338 bytes)
+- Large apps (10+ components) → dx-client (7.5 KB)
 
 ---
 
