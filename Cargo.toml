@@ -6,6 +6,7 @@ members = [
     "crates/dx-morph",
     "crates/dx-sched",
     "crates/dx-compiler",
+    "crates/dx-binary",
     "examples/hello-world",
 ]
 
