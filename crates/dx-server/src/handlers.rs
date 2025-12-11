@@ -98,11 +98,69 @@ fn serve_spa_shell() -> Html<&'static str> {
 pub async fn serve_binary_stream(
     State(state): State<ServerState>,
     axum::extract::Path(app_id): axum::extract::Path<String>,
+    headers: axum::http::HeaderMap,
 ) -> impl IntoResponse {
     use axum::body::Body;
     use axum::http::header;
 
     tracing::info!("📡 Streaming binary for app: {}", app_id);
+
+    // Check If-None-Match header for delta patching
+    let client_hash = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.trim_matches('"'));
+
+    // Get current version hash
+    let current_hash = state
+        .current_version
+        .get("app.wasm")
+        .map(|entry| entry.value().clone());
+
+    // Check for version negotiation
+    if let (Some(client_hash_str), Some(current_hash_str)) = (client_hash, &current_hash) {
+        tracing::debug!("🔍 Client hash: {}, Current hash: {}", client_hash_str, current_hash_str);
+
+        // Case 1: Client has current version → 304 Not Modified
+        if client_hash_str == current_hash_str {
+            tracing::info!("✅ Client already has current version (304)");
+            return axum::response::Response::builder()
+                .status(StatusCode::NOT_MODIFIED)
+                .header(header::ETAG, format!("\"{}\"", current_hash_str))
+                .body(Body::empty())
+                .unwrap();
+        }
+
+        // Case 2: Client has old version → Send Patch
+        let patch_result = {
+            let store = state.version_store.lock().unwrap();
+            store.get(client_hash_str).and_then(|_| {
+                // Get new data
+                let new_data = state.binary_cache.get("app.wasm")?;
+                store.create_patch(client_hash_str, new_data.value())
+            })
+        };
+
+        if let Some(patch_data) = patch_result {
+            tracing::info!("📦 Sending patch ({} bytes)", patch_data.len());
+            
+            return axum::response::Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, "application/octet-stream")
+                .header(header::ETAG, format!("\"{}\"", current_hash_str))
+                .header("X-Dx-Patch", "true")
+                .header("X-Dx-Base-Hash", client_hash_str)
+                .header("X-Dx-Target-Hash", current_hash_str)
+                .body(Body::from(patch_data))
+                .unwrap();
+        }
+
+        // Case 3: Unknown old version → Fall through to full stream
+        tracing::debug!("⚠️ Unknown client hash, sending full stream");
+    }
+
+    // Case 4: No client hash or unknown → Send Full Stream
+    tracing::info!("📤 Sending full binary stream");
 
     // Load artifacts from cache
     let layout_bin = state
@@ -136,14 +194,19 @@ pub async fn serve_binary_stream(
     let body = Body::from_stream(stream);
 
     // Build response with streaming headers
-    let response = axum::response::Response::builder()
+    let mut response_builder = axum::response::Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "application/octet-stream")
         .header(header::CACHE_CONTROL, "public, max-age=31536000") // Cache for 1 year
         .header("X-Dx-Version", "1.0")
-        .header("X-Dx-Stream", "chunked")
-        .body(body)
-        .unwrap();
+        .header("X-Dx-Stream", "chunked");
+
+    // Add ETag if we have a hash
+    if let Some(hash) = current_hash {
+        response_builder = response_builder.header(header::ETAG, format!("\"{}\"", hash));
+    }
+
+    let response = response_builder.body(body).unwrap();
 
     tracing::debug!("✅ Stream initialized");
     response

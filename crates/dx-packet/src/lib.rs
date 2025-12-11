@@ -356,6 +356,8 @@ pub enum ChunkType {
     State = 0x03,
     /// Wasm: Runtime logic (logic.wasm)
     Wasm = 0x04,
+    /// Patch: Delta patch (binary diff)
+    Patch = 0x05,
     /// End of stream marker
     Eof = 0xFF,
 }
@@ -367,6 +369,7 @@ impl ChunkType {
             0x02 => Some(ChunkType::Layout),
             0x03 => Some(ChunkType::State),
             0x04 => Some(ChunkType::Wasm),
+            0x05 => Some(ChunkType::Patch),
             0xFF => Some(ChunkType::Eof),
             _ => None,
         }
@@ -408,6 +411,60 @@ impl ChunkHeader {
         Some(Self {
             chunk_type: bytes[0],
             length: u32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]),
+        })
+    }
+}
+
+/// Header for delta patches (binary diffs)
+/// Enables bandwidth-efficient updates by sending only changed bytes
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct PatchHeader {
+    /// Hash of the base version (what client has)
+    pub base_version_hash: u64,
+    /// Hash of the target version (what we're patching to)
+    pub target_version_hash: u64,
+    /// Patch algorithm: 1 = Block XOR, 2 = VCDIFF (future)
+    pub patch_algorithm: u8,
+}
+
+impl PatchHeader {
+    pub fn new(base_hash: u64, target_hash: u64, algorithm: u8) -> Self {
+        Self {
+            base_version_hash: base_hash,
+            target_version_hash: target_hash,
+            patch_algorithm: algorithm,
+        }
+    }
+
+    /// Serialize to 17 bytes: [base:8][target:8][algo:1]
+    pub fn to_bytes(&self) -> [u8; 17] {
+        let mut bytes = [0u8; 17];
+        bytes[0..8].copy_from_slice(&self.base_version_hash.to_le_bytes());
+        bytes[8..16].copy_from_slice(&self.target_version_hash.to_le_bytes());
+        bytes[16] = self.patch_algorithm;
+        bytes
+    }
+
+    /// Deserialize from 17 bytes
+    pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() < 17 {
+            return None;
+        }
+        let base = u64::from_le_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+        ]);
+        let target = u64::from_le_bytes([
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15],
+        ]);
+        let algo = bytes[16];
+        Some(Self {
+            base_version_hash: base,
+            target_version_hash: target,
+            patch_algorithm: algo,
         })
     }
 }

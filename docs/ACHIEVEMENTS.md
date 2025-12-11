@@ -141,6 +141,13 @@ Guaranteed 60 FPS:
 - Zero-Copy Chunk Headers (89 bytes overhead)
 - Tests: 18 passing
 
+**Day 17: The Delta Patcher** ✅
+- Block-Based XOR Diffing (64-byte blocks)
+- Version Storage (last 5 versions per artifact)
+- HTTP Version Negotiation (If-None-Match/ETag)
+- 98% Bandwidth Reduction (50KB → 1KB updates)
+- Tests: 22 passing
+
 ### Architecture
 ✅ **Zero Parse Time** - WASM executes instantly  
 ✅ **Zero Hydration** - Binary protocol eliminates JSON  

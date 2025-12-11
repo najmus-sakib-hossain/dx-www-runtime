@@ -49,8 +49,11 @@ pub struct ServerState {
     pub binary_cache: Arc<DashMap<String, Vec<u8>>>,
     /// Template cache (id -> Template) - stores full Template structs
     pub template_cache: Arc<DashMap<u32, Template>>,
-    /// Version hashes for delta patching
-    pub version_cache: Arc<DashMap<String, String>>,
+    /// Version storage for delta patching (hash -> binary data)
+    /// Stores last 5 versions of each artifact for patch generation
+    pub version_store: Arc<std::sync::Mutex<delta::VersionStore>>,
+    /// Current version hash (artifact name -> hash)
+    pub current_version: Arc<DashMap<String, String>>,
 }
 
 impl Default for ServerState {
@@ -64,7 +67,8 @@ impl ServerState {
         Self {
             binary_cache: Arc::new(DashMap::new()),
             template_cache: Arc::new(DashMap::new()),
-            version_cache: Arc::new(DashMap::new()),
+            version_store: Arc::new(std::sync::Mutex::new(delta::VersionStore::new(5))),
+            current_version: Arc::new(DashMap::new()),
         }
     }
 
@@ -92,8 +96,17 @@ impl ServerState {
         let layout_path = path.join("layout.bin");
         if layout_path.exists() {
             let bytes = std::fs::read(&layout_path)?;
-            self.binary_cache.insert("layout.bin".to_string(), bytes);
-            tracing::debug!("  ✓ Cached layout.bin ({} bytes)", self.binary_cache.get("layout.bin").unwrap().len());
+            self.binary_cache.insert("layout.bin".to_string(), bytes.clone());
+            
+            // Store version for delta patching
+            let hash = {
+                let mut store = self.version_store.lock().unwrap();
+                store.store(bytes)
+            };
+            self.current_version.insert("layout.bin".to_string(), hash.clone());
+            tracing::debug!("  ✓ Cached layout.bin ({} bytes, hash: {})", 
+                self.binary_cache.get("layout.bin").unwrap().len(), 
+                &hash[..8]);
         }
 
         // Load app.wasm
@@ -101,8 +114,15 @@ impl ServerState {
         if wasm_path.exists() {
             let bytes = std::fs::read(&wasm_path)?;
             let size = bytes.len();
-            self.binary_cache.insert("app.wasm".to_string(), bytes);
-            tracing::info!("  ✓ Loaded app.wasm ({} bytes)", size);
+            self.binary_cache.insert("app.wasm".to_string(), bytes.clone());
+            
+            // Store version for delta patching
+            let hash = {
+                let mut store = self.version_store.lock().unwrap();
+                store.store(bytes)
+            };
+            self.current_version.insert("app.wasm".to_string(), hash.clone());
+            tracing::info!("  ✓ Loaded app.wasm ({} bytes, hash: {})", size, &hash[..8]);
         }
 
         Ok(())
