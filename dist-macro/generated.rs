@@ -47,10 +47,10 @@ pub struct DashboardState {
 impl Default for DashboardState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -73,10 +73,10 @@ pub struct HeaderState {
 impl Default for HeaderState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -99,10 +99,10 @@ pub struct SidebarState {
 impl Default for SidebarState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -125,10 +125,10 @@ pub struct SearchBarState {
 impl Default for SearchBarState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -151,10 +151,10 @@ pub struct FilterBarState {
 impl Default for FilterBarState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -177,10 +177,10 @@ pub struct LoadingSpinnerState {
 impl Default for LoadingSpinnerState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -203,10 +203,10 @@ pub struct ErrorBannerState {
 impl Default for ErrorBannerState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -229,10 +229,10 @@ pub struct UserTableState {
 impl Default for UserTableState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -255,10 +255,10 @@ pub struct UserDetailState {
 impl Default for UserDetailState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -281,10 +281,10 @@ pub struct FooterState {
 impl Default for FooterState {
     fn default() -> Self {
         Self {
-            users: [],
+            users: 0,
             loading: true,
-            error: null,
-            selectedUser: null,
+            error: 0,
+            selectedUser: 0,
             searchQuery: "",
             sortOrder: "asc",
             filterStatus: "all",
@@ -307,9 +307,7 @@ const SLOT_7: u32 = 7; // <- error && <ErrorBanner message={error
 const SLOT_8: u32 = 8; // <- filteredUsers
 const SLOT_9: u32 = 9; // <- setSelectedUser
 const SLOT_10: u32 = 10; // <- selectedUser
-const SLOT_11: u32 = 11; // <- selectedUser && (
-                    <UserDetail 
-                        user={selectedUser
+const SLOT_11: u32 = 11; // <- selectedUser && (                      <UserDetail
 const SLOT_12: u32 = 12; // <- () => setSelectedUser(null)
 
 // ============================================================================
@@ -353,25 +351,19 @@ pub extern "C" fn update() {
         // Patch slot 5 with setSortOrder
         // host_patch_slot(node_id, SLOT_5, SETSORTORDER_PTR, SETSORTORDER_LEN);
         // Patch slot 6 with loading && <LoadingSpinner />
-        // host_patch_slot(node_id, SLOT_6, LOADING && <LOADINGSPINNER />_PTR, LOADING && <LOADINGSPINNER />_LEN);
+        // host_patch_slot(node_id, SLOT_6, LOADINGLOADINGSPINNER_PTR, LOADINGLOADINGSPINNER_LEN);
         // Patch slot 7 with error && <ErrorBanner message={error
-        // host_patch_slot(node_id, SLOT_7, ERROR && <ERRORBANNER MESSAGE={ERROR_PTR, ERROR && <ERRORBANNER MESSAGE={ERROR_LEN);
+        // host_patch_slot(node_id, SLOT_7, ERRORERRORBANNERMESSAGEERROR_PTR, ERRORERRORBANNERMESSAGEERROR_LEN);
         // Patch slot 8 with filteredUsers
         // host_patch_slot(node_id, SLOT_8, FILTEREDUSERS_PTR, FILTEREDUSERS_LEN);
         // Patch slot 9 with setSelectedUser
         // host_patch_slot(node_id, SLOT_9, SETSELECTEDUSER_PTR, SETSELECTEDUSER_LEN);
         // Patch slot 10 with selectedUser
         // host_patch_slot(node_id, SLOT_10, SELECTEDUSER_PTR, SELECTEDUSER_LEN);
-        // Patch slot 11 with selectedUser && (
-                    <UserDetail 
-                        user={selectedUser
-        // host_patch_slot(node_id, SLOT_11, SELECTEDUSER && (
-                    <USERDETAIL 
-                        USER={SELECTEDUSER_PTR, SELECTEDUSER && (
-                    <USERDETAIL 
-                        USER={SELECTEDUSER_LEN);
+        // Patch slot 11 with selectedUser && (                      <UserDetail
+        // host_patch_slot(node_id, SLOT_11, SELECTEDUSERUSERDETAILUSERSELECTEDUSER_PTR, SELECTEDUSERUSERDETAILUSERSELECTEDUSER_LEN);
         // Patch slot 12 with () => setSelectedUser(null)
-        // host_patch_slot(node_id, SLOT_12, () => SETSELECTEDUSER(NULL)_PTR, () => SETSELECTEDUSER(NULL)_LEN);
+        // host_patch_slot(node_id, SLOT_12, SETSELECTEDUSERNULL_PTR, SETSELECTEDUSERNULL_LEN);
         host_flush_render();
     }
 }

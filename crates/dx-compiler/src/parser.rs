@@ -207,7 +207,7 @@ fn extract_jsx_body(source: &str, component_name: &str) -> String {
 }
 
 /// Extract state declarations from component
-fn extract_state(source: &str, component_name: &str) -> Vec<StateDef> {
+fn extract_state(source: &str, _component_name: &str) -> Vec<StateDef> {
     let mut states = Vec::new();
 
     // Look for useState calls

@@ -98,6 +98,7 @@ impl StringInterner {
 // ============================================================================
 
 /// Maps event handler expressions to numeric IDs
+#[allow(dead_code)]
 struct EventIndex {
     /// Map from expression to event ID
     handlers: HashMap<String, u32>,
@@ -354,11 +355,19 @@ fn generate_template_code(
     let tag_name = extract_tag_name(html);
     let tag_var = interner.intern(&tag_name);
 
-    lines.push(format!(
-        "// Template {}: {}",
-        template.id,
-        html.chars().take(50).collect::<String>()
-    ));
+    // Sanitize HTML for comment (replace < > with [ ], newlines with spaces)
+    let sanitized_html: String = html
+        .chars()
+        .take(50)
+        .map(|c| match c {
+            '<' => '[',
+            '>' => ']',
+            '\n' | '\r' => ' ',
+            _ => c,
+        })
+        .collect();
+    
+    lines.push(format!("// Template {}: {}", template.id, sanitized_html));
     lines.push(format!(
         "let {} = host_create_element({}.as_ptr(), {}.len() as u32);",
         node_var, tag_var, tag_var
@@ -385,27 +394,39 @@ fn generate_template_code(
 /// Generate Rust code for a binding (dynamic content)
 fn generate_binding_code(
     binding: &Binding,
-    interner: &mut StringInterner,
+    _interner: &mut StringInterner,
 ) -> Result<String> {
     let mut lines = Vec::new();
 
-    // Convert expression to Rust variable reference
-    // "self.count" -> "COUNT"
-    let rust_var = binding
-        .expression
-        .replace("self.", "")
-        .to_uppercase();
-
-    lines.push(format!("// Binding: slot {} <- {}", binding.slot_id, binding.expression));
+    // Check if this is an event handler (contains =>) or a regular state binding
+    let expr = &binding.expression;
     
-    // For now, generate a placeholder that sets text from the state variable
-    // This will need to be refined based on slot type
-    lines.push(format!(
-        "// TODO: host_set_text(slot_{}, &raw const {} as *const u8, core::mem::size_of_val(&{}) as u32);",
-        binding.slot_id,
-        rust_var,
-        rust_var
-    ));
+    if expr.contains("=>") || expr.contains("set") {
+        // Event handler - will be wired through on_event dispatcher
+        // Sanitize for comment
+        let sanitized: String = expr
+            .chars()
+            .take(30)
+            .filter(|c| c.is_alphanumeric() || *c == ' ' || *c == '_')
+            .collect();
+        lines.push(format!("// Slot {}: event handler ({}...)", binding.slot_id, sanitized));
+    } else {
+        // State binding - convert to Rust variable reference
+        // "self.count" -> "COUNT", "count" -> "COUNT"
+        let rust_var = expr
+            .replace("self.", "")
+            .replace("state.", "")
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '_')
+            .collect::<String>()
+            .to_uppercase();
+        
+        if !rust_var.is_empty() {
+            lines.push(format!("// Slot {}: state binding", binding.slot_id));
+            // Generate actual host_set_text call (placeholder node_id for now)
+            // TODO: track actual node IDs from template generation
+        }
+    }
 
     Ok(lines.join("\n"))
 }

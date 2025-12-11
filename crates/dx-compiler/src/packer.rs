@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! # Packer Module - The Binary Writer
 //!
 //! Creates the final `.dxb` artifact.

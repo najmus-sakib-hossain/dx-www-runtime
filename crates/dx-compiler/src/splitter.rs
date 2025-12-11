@@ -161,7 +161,7 @@ fn split_jsx(
 
     // TODO: Parse JSX properly
     // For now, create a dummy template for demo purposes
-    let mut html = String::new();
+    let mut html = jsx_body.to_string();
     let mut slots = Vec::new();
     let mut bindings = Vec::new();
 
@@ -174,7 +174,7 @@ fn split_jsx(
     // Simplified regex-based approach (production would use proper AST)
     let expression_pattern = Regex::new(r"\{([^}]+)\}").unwrap();
 
-    html = jsx_body.to_string();
+    // html initialized above
 
     for capture in expression_pattern.captures_iter(jsx_body) {
         let expression = capture.get(1).unwrap().as_str().trim();

@@ -148,9 +148,17 @@ pub fn generate_macro(
     output.push("// ============================================================================".to_string());
     output.push("".to_string());
     for binding in bindings {
+        let sanitized_expr: String = binding.expression
+            .chars()
+            .take(50)
+            .map(|c| match c {
+                '\n' | '\r' => ' ',
+                _ => c,
+            })
+            .collect();
         output.push(format!(
             "const SLOT_{}: u32 = {}; // <- {}",
-            binding.slot_id, binding.slot_id, binding.expression
+            binding.slot_id, binding.slot_id, sanitized_expr
         ));
     }
     output.push("".to_string());
@@ -197,10 +205,24 @@ pub fn generate_macro(
     output.push("        // Read from shared buffer and patch slots".to_string());
     
     for binding in bindings {
-        let var_name = binding.expression.replace("self.", "").to_uppercase();
+        let var_name = binding.expression
+            .replace("self.", "")
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '_')
+            .collect::<String>()
+            .to_uppercase();
+        let sanitized_expr: String = binding.expression
+            .chars()
+            .take(50)
+            .map(|c| match c {
+                '\n' | '\r' => ' ',
+                _ => c,
+            })
+            .collect();
+            
         output.push(format!(
             "        // Patch slot {} with {}",
-            binding.slot_id, binding.expression
+            binding.slot_id, sanitized_expr
         ));
         output.push(format!(
             "        // host_patch_slot(node_id, SLOT_{}, {}_PTR, {}_LEN);",
@@ -279,6 +301,18 @@ fn type_to_rust(ts_type: &str) -> &'static str {
 
 /// Generate default value for a field
 fn default_value(ts_type: &str, initial: &str) -> String {
+    if initial == "null" || initial == "undefined" {
+        return match ts_type {
+            "boolean" => "false".to_string(),
+            "string" => "\"\"".to_string(),
+            _ => "0".to_string(),
+        };
+    }
+    
+    if initial == "[]" {
+        return "0".to_string(); // Pointers/handles use 0 as null
+    }
+
     match ts_type {
         "number" => initial.to_string(),
         "boolean" => initial.to_string(),

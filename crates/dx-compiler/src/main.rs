@@ -122,6 +122,9 @@ async fn build_project(
 ) -> Result<()> {
     let start_time = Instant::now();
 
+    // Ensure output directory exists
+    std::fs::create_dir_all(&output).context("Failed to create output directory")?;
+
     println!("{}", style("🏭 Dx Compiler - Building...").bold().cyan());
     println!();
 
@@ -133,6 +136,9 @@ async fn build_project(
             .unwrap()
             .progress_chars("##-"),
     );
+
+    // Silence unused warning for now
+    let _ = skip_optimize;
 
     // Step 1: Parse
     pb.set_message("Parsing .tsx files...");
