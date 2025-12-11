@@ -103,3 +103,5 @@ Implement a Cargo Workspace structure. Do not build a monolith.
 When generating code, prioritize raw execution speed and memory compactness over readability. Use `unsafe` blocks where necessary for FFI and casting, but document the safety invariant clearly.
 Assume the target audience is systems engineers.
 Start by scaffolding the `Cargo.toml` workspace and the `dx-core` memory layout.
+
+Remember to please use /docs folder to store all documentation related files.
