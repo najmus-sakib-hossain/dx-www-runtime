@@ -339,7 +339,8 @@ pub fn flush_to_element(target_selector: &str) {
 // INITIALIZATION
 // ============================================================================
 
-#[wasm_bindgen(start)]
+// Initialization moved to consumer (init_dx_dom is no longer auto-called)
+// Call this manually from your app if needed
 pub fn init_dx_dom() {
     #[cfg(target_arch = "wasm32")]
     dx_core::panic_hook();

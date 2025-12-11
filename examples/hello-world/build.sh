@@ -3,6 +3,9 @@
 
 set -e
 
+# Change to workspace root
+cd "$(dirname "$0")/../.." || exit 1
+
 echo "🔨 Building dx-www hello-world example..."
 
 # Build the WASM binary

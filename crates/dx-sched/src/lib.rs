@@ -339,7 +339,6 @@ pub fn schedule_idle(callback: &js_sys::Function) {
 // INITIALIZATION
 // ============================================================================
 
-#[wasm_bindgen(start)]
 pub fn init_dx_sched() {
     #[cfg(target_arch = "wasm32")]
     {

@@ -373,7 +373,6 @@ where
 use wasm_bindgen::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(start)]
 pub fn init_dx_morph() {
     web_sys::console::log_1(&"dx-morph: State Patcher Initialized".into());
 }
