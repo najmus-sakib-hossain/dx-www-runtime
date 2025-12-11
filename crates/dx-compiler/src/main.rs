@@ -22,6 +22,7 @@ use std::time::Instant;
 
 mod analyzer;
 mod codegen;
+mod codegen_macro;
 mod codegen_micro;
 mod dev_server;
 mod packer;
@@ -169,7 +170,7 @@ async fn build_project(
     let (htip_stream, _string_table) =
         codegen::generate_htip(&templates, &bindings, &state_schema, verbose)?;
     
-    // For Micro mode: also generate raw Rust FFI code
+    // For Micro mode: generate raw Rust FFI code
     if runtime_variant == analyzer::RuntimeVariant::Micro {
         pb.set_message("Generating Micro Rust FFI code...");
         let rust_code = codegen_micro::generate_micro(&templates, &bindings, &state_schema, verbose)?;
@@ -178,6 +179,23 @@ async fn build_project(
         
         if verbose {
             println!("  ✓ Generated Micro Rust code: {}", rust_path.display());
+        }
+    }
+    
+    // For Macro mode: generate layout.bin + Rust glue code
+    if runtime_variant == analyzer::RuntimeVariant::Macro {
+        pb.set_message("Generating Macro layout + glue code...");
+        
+        // Serialize templates to layout.bin
+        codegen_macro::serialize_layout(&templates, &output)?;
+        
+        // Generate Rust glue code
+        let rust_code = codegen_macro::generate_macro(&templates, &bindings, &state_schema, verbose)?;
+        let rust_path = output.join("generated.rs");
+        std::fs::write(&rust_path, &rust_code)?;
+        
+        if verbose {
+            println!("  ✓ Generated Macro layout.bin + Rust code: {}", output.display());
         }
     }
     pb.inc(1);
