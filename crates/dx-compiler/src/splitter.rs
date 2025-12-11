@@ -18,30 +18,8 @@ use std::collections::HashMap;
 
 use crate::parser::{Component, ParsedModule};
 
-/// Template definition for static HTML structure
-#[derive(Debug, Clone, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
-pub struct Template {
-    pub id: u32,
-    pub html: String,        // Static HTML with <!--SLOT_N--> markers
-    pub slots: Vec<SlotDef>, // Metadata for each slot
-    pub hash: String,        // For deduplication
-}
-
-/// Slot definition for dynamic content
-#[derive(Debug, Clone, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
-pub struct SlotDef {
-    pub slot_id: u32,
-    pub slot_type: SlotType,
-    pub path: Vec<u32>, // DOM path (e.g., [0, 2, 1] = firstChild.childNodes[2].firstChild)
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
-pub enum SlotType {
-    Text,      // Text node content
-    Attribute, // Element attribute
-    Property,  // DOM property (e.g., checked, value)
-    Event,     // Event listener
-}
+// Re-export shared types from dx-packet
+pub use dx_packet::{Template, SlotDef, SlotType};
 
 /// Binding from Slot to Rust expression
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -10,55 +10,23 @@
 //! - **Section 3:** WASM Blob (Optimized)
 
 use anyhow::{Context, Result};
-use bincode::{Decode, Encode, config};
+use bincode::{config};
 use flate2::Compression;
 use flate2::write::GzEncoder;
-use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
 
 use crate::splitter::Template;
 
+// Re-export shared types
+pub use dx_packet::{DxbArtifact, CapabilitiesManifest};
+
 /// Magic bytes for .dxb format
 const MAGIC_BYTES: &[u8] = b"DX";
 
 /// Format version
 const FORMAT_VERSION: u8 = 1;
-
-/// .dxb file structure
-#[derive(Debug, Serialize, Deserialize, Encode, Decode)]
-pub struct DxbArtifact {
-    pub version: u8,
-    pub capabilities: CapabilitiesManifest,
-    pub templates: Vec<Template>,
-    pub wasm_size: u32,
-    // WASM bytes follow after this struct
-}
-
-/// Capabilities manifest for security
-#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
-pub struct CapabilitiesManifest {
-    pub network: bool,
-    pub storage: bool,
-    pub geolocation: bool,
-    pub camera: bool,
-    pub microphone: bool,
-    pub signature: Vec<u8>, // Blake3 HMAC of capabilities
-}
-
-impl Default for CapabilitiesManifest {
-    fn default() -> Self {
-        Self {
-            network: false,
-            storage: false,
-            geolocation: false,
-            camera: false,
-            microphone: false,
-            signature: Vec::new(),
-        }
-    }
-}
 
 /// Pack templates and WASM into .dxb file
 pub fn pack_dxb(

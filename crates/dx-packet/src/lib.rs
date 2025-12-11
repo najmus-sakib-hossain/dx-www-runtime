@@ -22,6 +22,7 @@
 //! ```
 
 #![no_std]
+extern crate alloc;
 
 // ============================================================================
 // HEADER
@@ -279,3 +280,74 @@ pub const MAX_STRINGS: u16 = 65535;
 
 /// Maximum nodes in registry
 pub const MAX_NODES: u16 = 65535;
+
+// ============================================================================
+// SHARED TYPES (Compiler <-> Server)
+// ============================================================================
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+
+/// Template definition for static HTML structure
+/// Used by Compiler (Writer) and Server (Reader)
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[derive(Debug, Clone)]
+pub struct Template {
+    pub id: u32,
+    pub html: alloc::string::String, // Static HTML with <!--SLOT_N--> markers
+    pub slots: alloc::vec::Vec<SlotDef>, // Metadata for each slot
+    pub hash: alloc::string::String, // For deduplication
+}
+
+/// Slot definition for dynamic content
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[derive(Debug, Clone)]
+pub struct SlotDef {
+    pub slot_id: u32,
+    pub slot_type: SlotType,
+    pub path: alloc::vec::Vec<u32>, // DOM path
+}
+
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[derive(Debug, Clone)]
+pub enum SlotType {
+    Text,      // Text node content
+    Attribute, // Element attribute
+    Property,  // DOM property
+    Event,     // Event listener
+}
+
+/// .dxb file structure container
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[derive(Debug)]
+pub struct DxbArtifact {
+    pub version: u8,
+    pub capabilities: CapabilitiesManifest,
+    pub templates: alloc::vec::Vec<Template>,
+    pub wasm_size: u32,
+}
+
+/// Capabilities manifest for security
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[derive(Debug, Clone)]
+pub struct CapabilitiesManifest {
+    pub network: bool,
+    pub storage: bool,
+    pub geolocation: bool,
+    pub camera: bool,
+    pub microphone: bool,
+    pub signature: alloc::vec::Vec<u8>,
+}
+
+impl Default for CapabilitiesManifest {
+    fn default() -> Self {
+        Self {
+            network: false,
+            storage: false,
+            geolocation: false,
+            camera: false,
+            microphone: false,
+            signature: alloc::vec::Vec::new(),
+        }
+    }
+}

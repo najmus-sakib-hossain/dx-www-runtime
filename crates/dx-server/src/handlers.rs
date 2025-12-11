@@ -10,60 +10,50 @@ use axum::{
     response::{Html, IntoResponse, Response},
 };
 
-/// Serve index.html
-pub async fn serve_index() -> impl IntoResponse {
-    Html(include_str!("../../../examples/hello-world/demo.html"))
-}
 
-/// Serve static files
-pub async fn serve_static(Path(path): Path<String>) -> impl IntoResponse {
-    // TODO: Implement proper static file serving
-    (StatusCode::NOT_FOUND, "Not found")
-}
 
-/// Serve binary payload
-pub async fn serve_binary(
-    Path(app): Path<String>,
+/// Serve index.html or SSR
+pub async fn serve_static(
     State(state): State<ServerState>,
+    headers: axum::http::HeaderMap,
+    uri: axum::http::Uri,
 ) -> impl IntoResponse {
-    match state.binary_cache.get(&app) {
-        Some(binary) => Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, "application/dx-binary")
-            .header(header::CACHE_CONTROL, "public, max-age=31536000, immutable")
-            .body(Body::from(binary.clone()))
-            .unwrap(),
-        None => Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::from("Binary not found"))
-            .unwrap(),
+    let user_agent = headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    // Detect Bot
+    if crate::ssr::is_bot(user_agent) {
+        // return serve_ssr(uri.path().to_string(), state).await.into_response();
+        return Html("Bot Detected - SSR Disabled".to_string()).into_response();
     }
+
+    // Serve SPA index for humans (SPA Fallback)
+    // In production, this would serve the actual file from dist
+    Html(include_str!("../../../examples/hello-world/demo.html")).into_response()
 }
 
-/// Serve delta patch
-pub async fn serve_delta(
-    Path(app): Path<String>,
-    State(state): State<ServerState>,
-) -> impl IntoResponse {
-    // TODO: Implement delta serving
-    // 1. Check If-None-Match header for old hash
-    // 2. Calculate delta
-    // 3. Serve with application/dx-patch MIME type
-
-    (StatusCode::NOT_IMPLEMENTED, "Delta patching coming soon")
+pub async fn serve_ssr(path: String, state: ServerState) -> impl IntoResponse {
+    Html("SSR Disabled".to_string())
 }
+/*
+    // Scoped block to drop DashMap Ref immediately
+    let template_html = state.template_cache.get(&0).map(|r| r.value().clone());
 
-/// Serve SSR (for SEO bots)
-pub async fn serve_ssr(
-    Path(path): Path<String>,
-    State(state): State<ServerState>,
-) -> impl IntoResponse {
-    // TODO: Implement SSR
-    // 1. Check User-Agent
-    // 2. If bot, inflate binary to HTML
-    // 3. Otherwise, redirect to SPA
+    if let Some(html_str) = template_html {
+        // ...
+        let html = crate::ssr::inflate_page(
+            &html_str,
+            &slots,
+            "Dx-Server SSR",
+            &meta
+        );
+        return Html(html);
+    }
+*/
 
-    Html("<html><body><h1>SSR Placeholder</h1></body></html>")
+    Html("<h1>500 - Template Not Found</h1>".to_string())
 }
 
 /// Health check endpoint

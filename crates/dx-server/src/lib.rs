@@ -63,13 +63,46 @@ impl ServerState {
             version_cache: Arc::new(DashMap::new()),
         }
     }
+
+    /// Load artifacts from build output directory
+    pub fn load_artifacts(&self, path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+        tracing::info!("📦 Loading artifacts from {}", path.display());
+
+        // Load layout.bin (Templates)
+        let layout_path = path.join("layout.bin");
+        if layout_path.exists() {
+            let bytes = std::fs::read(&layout_path)?;
+            let config = bincode::config::standard();
+            let templates: Vec<dx_packet::Template> = bincode::decode_from_slice(&bytes, config)?.0;
+            
+            tracing::info!("  ✓ Loaded {} templates", templates.len());
+            
+            // Populate cache
+            for template in templates {
+                self.template_cache.insert(template.id, template.html);
+            }
+        } else {
+            tracing::warn!("  ⚠️ layout.bin not found");
+        }
+
+        // Load app.wasm
+        let wasm_path = path.join("app.wasm");
+        if wasm_path.exists() {
+            let bytes = std::fs::read(&wasm_path)?;
+            let size = bytes.len();
+            self.binary_cache.insert("app.wasm".to_string(), bytes);
+            tracing::info!("  ✓ Loaded app.wasm ({} bytes)", size);
+        }
+
+        Ok(())
+    }
 }
 
 /// Build the Axum router with all routes
 pub fn build_router(state: ServerState) -> Router {
     Router::new()
-        // Static files
-        .route("/", get(handlers::serve_index))
+        // Static files (catch-all)
+        .route("/", get(handlers::serve_static))
         .route("/*path", get(handlers::serve_static))
         // Binary endpoints
         .route("/api/binary/:app", get(handlers::serve_binary))

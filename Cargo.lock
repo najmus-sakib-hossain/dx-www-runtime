@@ -685,6 +685,7 @@ dependencies = [
  "chrono",
  "clap",
  "console",
+ "dx-packet",
  "flate2",
  "indicatif",
  "notify",
@@ -741,6 +742,10 @@ dependencies = [
 [[package]]
 name = "dx-packet"
 version = "1.0.0"
+dependencies = [
+ "bincode",
+ "serde",
+]
 
 [[package]]
 name = "dx-sched"
@@ -765,7 +770,7 @@ dependencies = [
  "bytes",
  "dashmap",
  "dx-binary",
- "dx-compiler",
+ "dx-packet",
  "ed25519-dalek",
  "hyper 1.8.1",
  "mimalloc",

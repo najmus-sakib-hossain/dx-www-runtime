@@ -23,7 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 # Internal Dependencies
 dx-binary = { path = "../dx-binary" }
-dx-compiler = { path = "../dx-compiler" }
+dx-packet = { path = "../dx-packet", features = ["std"] }
 
 # Crypto (for Signed Payloads)
 ed25519-dalek = { version = "2.1.0", features = ["rand_core"] }

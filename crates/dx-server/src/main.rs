@@ -22,6 +22,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse address
     let addr: SocketAddr = "127.0.0.1:3000".parse()?;
 
+    // Load artifacts from dist-macro (for Day 15 demo)
+    if let Err(e) = state.load_artifacts(std::path::Path::new("dist-macro")) {
+        tracing::warn!("Failed to load initial artifacts: {}", e);
+    }
+
     // Start server
     serve(addr, state).await?;
 

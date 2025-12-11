@@ -48,6 +48,9 @@ blake3 = "1.5"
 # Datetime for metadata
 chrono = "0.4"
 
+# Internal
+dx-packet = { path = "../dx-packet", features = ["std"] }
+
 [dev-dependencies]
 tempfile = "3.8"
 
