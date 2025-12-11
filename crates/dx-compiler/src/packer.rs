@@ -152,6 +152,72 @@ pub fn pack_dxb(
     Ok(())
 }
 
+/// Pack templates and HTIP stream into .dxb file (NO WASM!)
+/// 
+/// This is the new lightweight packer. The output is pure data that
+/// the dx-client runtime interprets. No per-app WASM overhead.
+pub fn pack_dxb_htip(
+    output_dir: &Path,
+    templates: &[Template],
+    htip_stream: &[u8],
+    verbose: bool,
+) -> Result<()> {
+    if verbose {
+        println!("  Packing .dxb (HTIP mode)...");
+    }
+
+    // Create output directory
+    fs::create_dir_all(output_dir).context("Failed to create output directory")?;
+
+    let output_path = output_dir.join("app.dxb");
+
+    // Write final .dxb file
+    let mut file = File::create(&output_path)
+        .context(format!("Failed to create output file: {}", output_path.display()))?;
+
+    // Write header (simplified for HTIP-only format)
+    file.write_all(MAGIC_BYTES)
+        .context("Failed to write magic bytes")?;
+    file.write_all(&[FORMAT_VERSION])
+        .context("Failed to write version")?;
+    
+    // Write mode flag: 0x01 = HTIP-only (no WASM)
+    file.write_all(&[0x01])
+        .context("Failed to write mode flag")?;
+
+    // Write HTIP stream size (4 bytes, little endian)
+    let htip_size = htip_stream.len() as u32;
+    file.write_all(&htip_size.to_le_bytes())
+        .context("Failed to write HTIP size")?;
+
+    // Write HTIP stream (already includes header, strings, templates, opcodes)
+    file.write_all(htip_stream)
+        .context("Failed to write HTIP stream")?;
+
+    file.flush().context("Failed to flush file")?;
+
+    let total_size = MAGIC_BYTES.len() + 1 + 1 + 4 + htip_stream.len();
+
+    if verbose {
+        println!("    HTIP stream size: {} bytes", htip_size);
+        println!("    Total .dxb size: {} bytes", total_size);
+        
+        // Debug: write separate files
+        let htip_path = output_dir.join("app.htip");
+        fs::write(&htip_path, htip_stream)?;
+        println!("    Debug HTIP: {}", htip_path.display());
+        
+        let templates_path = output_dir.join("templates.json");
+        let templates_json = serde_json::to_string_pretty(templates)?;
+        fs::write(&templates_path, templates_json)?;
+        println!("    Debug templates: {}", templates_path.display());
+    }
+
+    println!("  ✓ Packed to: {} ({} bytes - TINY!)", output_path.display(), total_size);
+
+    Ok(())
+}
+
 /// Unpack .dxb file (for runtime loading)
 pub fn unpack_dxb(dxb_path: &Path) -> Result<(DxbArtifact, Vec<u8>)> {
     let bytes = fs::read(dxb_path).context("Failed to read .dxb file")?;

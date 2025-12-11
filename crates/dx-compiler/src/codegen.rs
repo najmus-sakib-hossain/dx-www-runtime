@@ -1,381 +1,182 @@
-//! # Codegen Module - The Rust Writer
+//! # Codegen Module - HTIP Binary Generator
 //!
-//! Writes temporary Rust code that powers the WASM.
-//! Takes the "Binding Map" and writes a Rust `struct`.
-//! Implements the `dirty_mask` logic automatically.
+//! Instead of generating Rust code and compiling to WASM (418KB overhead),
+//! this module directly emits HTIP binary opcodes that the dx-client runtime
+//! interprets. Result: ~1KB of data instead of 418KB of WASM.
+//!
+//! ## Architecture Change (Dec 11)
+//! OLD: Parse -> Generate Rust -> Compile WASM -> Pack (418KB)
+//! NEW: Parse -> Generate Opcodes -> Pack (1KB)
+//!
+//! The dx-client WASM (22KB) is the ONLY WASM. Apps are pure data.
 
-use anyhow::{Context, Result};
-use proc_macro2::{Ident, Span, TokenStream};
-use quote::quote;
+use anyhow::Result;
 use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::splitter::{Binding, StateSchema, Template};
 
-/// Generate Rust code from templates and bindings
-pub fn generate_rust(
-    templates: Vec<Template>,
-    bindings: Vec<Binding>,
-    schemas: Vec<StateSchema>,
+/// HTIP Header (matches dx_packet::HtipHeader)
+const MAGIC: u16 = 0x4458; // "DX"
+const VERSION: u8 = 2;
+
+/// String interner for efficient string deduplication
+struct StringInterner {
+    strings: Vec<String>,
+    index: HashMap<String, u16>,
+}
+
+impl StringInterner {
+    fn new() -> Self {
+        Self {
+            strings: Vec::new(),
+            index: HashMap::new(),
+        }
+    }
+    
+    fn intern(&mut self, s: &str) -> u16 {
+        if let Some(&idx) = self.index.get(s) {
+            return idx;
+        }
+        let idx = self.strings.len() as u16;
+        self.strings.push(s.to_string());
+        self.index.insert(s.to_string(), idx);
+        idx
+    }
+    
+    fn into_strings(self) -> Vec<String> {
+        self.strings
+    }
+}
+
+/// Generate HTIP binary stream from templates and bindings
+/// 
+/// Returns: (htip_stream: Vec<u8>, string_table: Vec<String>)
+pub fn generate_htip(
+    templates: &[Template],
+    bindings: &[Binding],
+    _schemas: &[StateSchema],
     verbose: bool,
-) -> Result<String> {
+) -> Result<(Vec<u8>, Vec<String>)> {
     if verbose {
-        println!("  Generating Rust code...");
+        println!("  Generating HTIP binary stream...");
     }
 
-    let mut generated = TokenStream::new();
+    let mut interner = StringInterner::new();
+    
+    // Build opcodes
+    let mut opcodes: Vec<u8> = Vec::new();
+    let mut opcode_count: u32 = 0;
 
-    // Generate imports
-    generated.extend(generate_imports());
-
-    // Generate template registration
-    generated.extend(generate_template_registration(&templates));
-
-    // Generate component structs
-    for schema in &schemas {
-        generated.extend(generate_component_struct(schema, verbose)?);
+    // For each template, emit a Clone opcode (initial render)
+    for template in templates {
+        let new_node_id = template.id as u16 + 1;
+        opcodes.push(1); // op_type = Clone
+        opcodes.push(0); // reserved
+        opcodes.extend(&new_node_id.to_le_bytes());
+        opcodes.extend(&(template.id as u16).to_le_bytes());
+        opcodes.extend(&0u16.to_le_bytes()); // parent_id = root
+        opcode_count += 1;
     }
 
-    // Generate update implementations
-    for schema in &schemas {
-        let component_bindings: Vec<_> = bindings
-            .iter()
-            .filter(|b| b.component == schema.component)
-            .collect();
-        generated.extend(generate_update_impl(schema, &component_bindings)?);
-    }
-
-    Ok(generated.to_string())
-}
-
-/// Generate imports for generated code
-fn generate_imports() -> TokenStream {
-    quote! {
-        use wasm_bindgen::prelude::*;
-        use web_sys::{Document, Element, HtmlElement, Node, window};
-
-        // TODO: Import dx-dom, dx-morph, dx-sched from runtime
-        // For now, inline minimal bindings
-
-        #[wasm_bindgen]
-        extern "C" {
-            #[wasm_bindgen(js_namespace = console)]
-            fn log(s: &str);
-        }
-
-        const BIT_0: u64 = 1 << 0;
-        const BIT_1: u64 = 1 << 1;
-        const BIT_2: u64 = 1 << 2;
-        const BIT_3: u64 = 1 << 3;
-        const BIT_4: u64 = 1 << 4;
-        const BIT_5: u64 = 1 << 5;
-        const BIT_6: u64 = 1 << 6;
-        const BIT_7: u64 = 1 << 7;
-    }
-}
-
-/// Generate template registration code
-fn generate_template_registration(templates: &[Template]) -> TokenStream {
-    let template_count = templates.len();
-    let template_html: Vec<_> = templates.iter().map(|t| &t.html).collect();
-
-    quote! {
-        #[wasm_bindgen(start)]
-        pub fn init_templates() {
-            // Register templates in the browser
-            let window = window().expect("no global window");
-            let document = window.document().expect("no document");
-
-            #(
-                {
-                    let template = document.create_element("template").unwrap();
-                    template.set_inner_html(#template_html);
-                    // Store in global template cache
-                }
-            )*
-
-            log(&format!("Registered {} templates", #template_count));
-        }
-    }
-}
-
-/// Generate component struct
-fn generate_component_struct(schema: &StateSchema, verbose: bool) -> Result<TokenStream> {
-    if verbose {
-        println!("    Generating struct for {}", schema.component);
-    }
-
-    let component_name = Ident::new(&schema.component, Span::call_site());
-
-    let field_names: Vec<_> = schema
-        .fields
-        .iter()
-        .map(|f| Ident::new(&f.name, Span::call_site()))
-        .collect();
-
-    let field_types: Vec<_> = schema
-        .fields
-        .iter()
-        .map(|f| {
-            // Convert TypeScript types to Rust types
-            let rust_type = match f.type_name.as_str() {
-                "number" => "i32",
-                "string" => "String",
-                "boolean" => "bool",
-                _ => "i32", // Default fallback
-            };
-            Ident::new(rust_type, Span::call_site())
-        })
-        .collect();
-
-    let initial_values: Vec<_> = schema
-        .fields
-        .iter()
-        .map(|f| {
-            // Parse initial values
-            let val_str = if f.type_name == "string" {
-                format!("String::from(\"{}\")", f.initial_value)
-            } else {
-                f.initial_value.clone()
-            };
-            
-            use std::str::FromStr;
-            TokenStream::from_str(&val_str).unwrap_or_else(|_| quote!(0))
-        })
-        .collect();
-
-    Ok(quote! {
-        #[wasm_bindgen]
-        pub struct #component_name {
-            dirty_mask: u64,
-            #(pub #field_names: #field_types,)*
-        }
-
-        #[wasm_bindgen]
-        impl #component_name {
-            #[wasm_bindgen(constructor)]
-            pub fn new() -> Self {
-                Self {
-                    dirty_mask: 0,
-                    #(#field_names: #initial_values,)*
-                }
-            }
-
-            pub fn mark_dirty(&mut self, bit: u8) {
-                self.dirty_mask |= 1u64 << bit;
-            }
-
-            pub fn clear_dirty(&mut self) {
-                self.dirty_mask = 0;
-            }
-
-            pub fn is_dirty(&self, bit: u8) -> bool {
-                (self.dirty_mask & (1u64 << bit)) != 0
-            }
-        }
-    })
-}
-
-/// Generate update implementation
-fn generate_update_impl(schema: &StateSchema, bindings: &[&Binding]) -> Result<TokenStream> {
-    let component_name = Ident::new(&schema.component, Span::call_site());
-
-    // Group bindings by dirty bit
-    let mut bit_groups: HashMap<u8, Vec<&Binding>> = HashMap::new();
+    // For each binding, emit a PatchText opcode
     for binding in bindings {
-        bit_groups
-            .entry(binding.dirty_bit)
-            .or_insert_with(Vec::new)
-            .push(binding);
+        let text = format!("{{{}}}", binding.expression);
+        let string_idx = interner.intern(&text);
+        
+        let target_id = binding.slot_id as u16 + 1;
+        opcodes.push(2); // op_type = PatchText
+        opcodes.push(0); // reserved
+        opcodes.extend(&target_id.to_le_bytes());
+        opcodes.extend(&string_idx.to_le_bytes());
+        opcodes.extend(&0u16.to_le_bytes());
+        opcode_count += 1;
     }
 
-    let update_checks: Vec<_> = bit_groups
-        .iter()
-        .map(|(bit, group)| {
-            let bit_lit = *bit;
-            let updates: Vec<_> = group
-                .iter()
-                .map(|binding| {
-                    let slot_id = binding.slot_id;
-                    let expr = &binding.expression;
-                    quote! {
-                        // Update slot #slot_id with #expr
-                        log(&format!("Updating slot {} with value: {:?}", #slot_id, #expr));
-                        // TODO: Call dx_dom::update_text or update_attribute
-                    }
-                })
-                .collect();
-
-            quote! {
-                if self.is_dirty(#bit_lit) {
-                    #(#updates)*
-                }
-            }
-        })
-        .collect();
-
-    Ok(quote! {
-        #[wasm_bindgen]
-        impl #component_name {
-            pub fn update(&mut self) {
-                if self.dirty_mask == 0 {
-                    return; // Nothing to update
-                }
-
-                #(#update_checks)*
-
-                self.clear_dirty();
-            }
-
-            pub fn render(&self) {
-                log(&format!("Rendering {}", stringify!(#component_name)));
-                // TODO: Clone template and populate slots
-            }
-        }
-    })
-}
-
-/// Compile generated Rust code to WASM
-pub fn compile_to_wasm(rust_code: String, skip_optimize: bool, verbose: bool) -> Result<Vec<u8>> {
-    if verbose {
-        println!("  Compiling to WASM...");
+    // Build template dictionary (intern HTML into string table)
+    let mut template_entries: Vec<u8> = Vec::new();
+    for template in templates {
+        let html_idx = interner.intern(&template.html);
+        template_entries.extend(&(template.id as u16).to_le_bytes());
+        template_entries.extend(&html_idx.to_le_bytes());
+        template_entries.push(template.slots.len() as u8);
+        template_entries.extend(&[0u8; 3]);
     }
 
-    // Use fixed debug directory for easier inspection
-    let temp_dir = std::env::current_dir()?.join("debug_out");
-    if fs::exists(&temp_dir)? {
-        fs::remove_dir_all(&temp_dir)?;
+    // Build string table binary
+    let string_table = interner.into_strings();
+    let mut string_entries: Vec<u8> = Vec::new();
+    let mut string_data: Vec<u8> = Vec::new();
+    
+    for s in &string_table {
+        let offset = string_data.len() as u32;
+        let len = s.len() as u16;
+        string_entries.extend(&offset.to_le_bytes());
+        string_entries.extend(&len.to_le_bytes());
+        string_entries.extend(&0u16.to_le_bytes());
+        string_data.extend(s.as_bytes());
     }
-    fs::create_dir_all(&temp_dir).context("Failed to create debug directory")?;
+
+    // Calculate payload size
+    let payload_size = string_entries.len() + string_data.len() + template_entries.len() + opcodes.len();
+
+    // Build header
+    let mut stream = Vec::new();
+    stream.extend(&MAGIC.to_le_bytes());
+    stream.push(VERSION);
+    stream.push(0x03); // flags: has_strings | has_templates
+    stream.extend(&(templates.len() as u16).to_le_bytes());
+    stream.extend(&(string_table.len() as u16).to_le_bytes());
+    stream.extend(&opcode_count.to_le_bytes());
+    stream.extend(&(payload_size as u32).to_le_bytes());
+
+    // Append sections
+    stream.extend(&string_entries);
+    stream.extend(&string_data);
+    stream.extend(&template_entries);
+    stream.extend(&opcodes);
 
     if verbose {
-        println!("    Debug build dir: {}", temp_dir.display());
+        println!("    HTIP stream size: {} bytes", stream.len());
+        println!("    String table: {} entries", string_table.len());
+        println!("    Templates: {} entries", templates.len());
+        println!("    Opcodes: {} entries", opcode_count);
     }
 
-    // Write Cargo.toml
-    let cargo_toml = r#"[package]
-name = "dx-generated"
-version = "0.1.0"
-edition = "2021"
-
-[workspace]
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlElement", "Node"] }
-
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
-"#;
-
-    fs::write(temp_dir.join("Cargo.toml"), cargo_toml)?;
-
-    // Create src directory
-    let src_dir = temp_dir.join("src");
-    fs::create_dir_all(&src_dir)?;
-
-    // Write generated lib.rs
-    fs::write(src_dir.join("lib.rs"), rust_code)?;
-
-    // Run cargo build
-    let mut cmd = Command::new("cargo");
-    cmd.arg("build")
-        .arg("--target")
-        .arg("wasm32-unknown-unknown")
-        .arg("--release")
-        .current_dir(&temp_dir);
-
-    if verbose {
-        println!("    Running: {:?}", cmd);
-    }
-
-    let output = cmd.output().context("Failed to run cargo build")?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(anyhow::anyhow!("Cargo build failed:\n{}", stderr));
-    }
-
-    // Read compiled WASM
-    let wasm_path = temp_dir
-        .join("target")
-        .join("wasm32-unknown-unknown")
-        .join("release")
-        .join("dx_generated.wasm");
-
-    let mut wasm_bytes = fs::read(&wasm_path).context("Failed to read compiled WASM")?;
-
-    // Optimize with wasm-opt if requested
-    if !skip_optimize {
-        if verbose {
-            println!("  Running wasm-opt...");
-        }
-
-        // Check if wasm-opt is available
-        if Command::new("wasm-opt").arg("--version").output().is_ok() {
-            let optimized_path = temp_dir.join("optimized.wasm");
-
-            let status = Command::new("wasm-opt")
-                .arg("-Oz")
-                .arg(&wasm_path)
-                .arg("-o")
-                .arg(&optimized_path)
-                .status()
-                .context("Failed to run wasm-opt")?;
-
-            if status.success() {
-                wasm_bytes = fs::read(&optimized_path)?;
-            } else if verbose {
-                println!("    wasm-opt failed, using unoptimized WASM");
-            }
-        } else if verbose {
-            println!("    wasm-opt not found, skipping optimization");
-        }
-    }
-
-    // Cleanup temp directory
-    if !verbose {
-        let _ = fs::remove_dir_all(&temp_dir);
-    }
-
-    if verbose {
-        println!("  WASM size: {} bytes", wasm_bytes.len());
-    }
-
-    Ok(wasm_bytes)
+    Ok((stream, string_table))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::splitter::{SlotDef, SlotType};
 
     #[test]
-    fn test_struct_generation() {
-        let schema = StateSchema {
-            component: "Counter".to_string(),
-            fields: vec![StateField {
-                name: "count".to_string(),
-                type_name: "number".to_string(),
-                initial_value: "0".to_string(),
-                dirty_bit: 0,
+    fn test_htip_generation() {
+        let templates = vec![Template {
+            id: 0,
+            html: "<div>Hello</div>".to_string(),
+            slots: vec![SlotDef {
+                slot_id: 0,
+                slot_type: SlotType::Text,
+                path: vec![0],
             }],
-        };
+            hash: "test".to_string(),
+        }];
 
-        let result = generate_component_struct(&schema, false);
-        assert!(result.is_ok());
+        let bindings = vec![Binding {
+            slot_id: 0,
+            component: "Test".to_string(),
+            expression: "self.count".to_string(),
+            dirty_bit: 0,
+        }];
 
-        let tokens = result.unwrap();
-        let code = tokens.to_string();
-        assert!(code.contains("pub struct Counter"));
-        assert!(code.contains("dirty_mask"));
+        let schemas = vec![];
+
+        let (stream, strings) = generate_htip(&templates, &bindings, &schemas, false).unwrap();
+
+        assert_eq!(&stream[0..2], &[0x58, 0x44]); // "DX" little-endian
+        assert_eq!(stream[2], 2); // version
+        assert!(!strings.is_empty());
+        assert!(stream.len() < 500, "HTIP stream should be tiny, got {} bytes", stream.len());
     }
 }

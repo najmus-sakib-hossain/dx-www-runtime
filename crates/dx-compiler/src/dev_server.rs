@@ -87,13 +87,14 @@ async fn perform_build(entry: &PathBuf, verbose: bool) -> Result<BuildArtifact> 
     let parsed = crate::parser::parse_entry(entry, verbose)?;
     let shaken = crate::parser::tree_shake(parsed, verbose)?;
     let (templates, bindings, schemas) = crate::splitter::split_components(shaken, verbose)?;
-    let rust_code = crate::codegen::generate_rust(templates.clone(), bindings, schemas, verbose)?;
-    let wasm_bytes = crate::codegen::compile_to_wasm(rust_code, true, verbose)?; // Skip optimize for speed
-    let hash = blake3::hash(&wasm_bytes).to_hex().to_string();
+    
+    // Use new HTIP binary generation (no Rust/WASM compilation!)
+    let (htip_stream, _strings) = crate::codegen::generate_htip(&templates, &bindings, &schemas, verbose)?;
+    let hash = blake3::hash(&htip_stream).to_hex().to_string();
 
     Ok(BuildArtifact {
         templates,
-        wasm_bytes,
+        htip_stream,
         hash,
     })
 }
@@ -102,7 +103,7 @@ async fn perform_build(entry: &PathBuf, verbose: bool) -> Result<BuildArtifact> 
 #[derive(Clone)]
 struct BuildArtifact {
     templates: Vec<crate::splitter::Template>,
-    wasm_bytes: Vec<u8>,
+    htip_stream: Vec<u8>,
     hash: String,
 }
 
@@ -150,11 +151,11 @@ fn calculate_delta(old: &BuildArtifact, new: &BuildArtifact) -> String {
         }
     }
 
-    if old.wasm_bytes.len() != new.wasm_bytes.len() {
+    if old.htip_stream.len() != new.htip_stream.len() {
         changes.push(format!(
-            "wasm: {} -> {} bytes",
-            old.wasm_bytes.len(),
-            new.wasm_bytes.len()
+            "htip: {} -> {} bytes",
+            old.htip_stream.len(),
+            new.htip_stream.len()
         ));
     }
 

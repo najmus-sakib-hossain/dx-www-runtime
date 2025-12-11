@@ -147,20 +147,16 @@ async fn build_project(
     let (templates, bindings, state_schema) = splitter::split_components(shaken, verbose)?;
     pb.inc(1);
 
-    // Step 4: Generate Rust Code
-    pb.set_message("Generating Rust code...");
-    let rust_code = codegen::generate_rust(templates.clone(), bindings, state_schema, verbose)?;
+    // Step 4: Generate HTIP Binary (NO RUST/WASM - pure data!)
+    pb.set_message("Generating HTIP binary...");
+    let (htip_stream, _string_table) = codegen::generate_htip(&templates, &bindings, &state_schema, verbose)?;
     pb.inc(1);
 
-    // Step 5: Compile WASM
-    pb.set_message("Compiling to WASM...");
-    let wasm_bytes = codegen::compile_to_wasm(rust_code, skip_optimize, verbose)?;
-    pb.inc(1);
-
-    // Step 6: Pack .dxb
+    // Step 5: Pack .dxb (templates + HTIP stream, NO WASM!)
     pb.set_message("Packing .dxb artifact...");
-    packer::pack_dxb(&output, templates, wasm_bytes, verbose)?;
+    packer::pack_dxb_htip(&output, &templates, &htip_stream, verbose)?;
     pb.inc(1);
+    pb.inc(1); // Skip extra step
 
     pb.finish_with_message("Build complete!");
 
