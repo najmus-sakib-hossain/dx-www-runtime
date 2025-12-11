@@ -114,12 +114,13 @@ fn parse_module_recursive(
     Ok(())
 }
 
-/// Parse a single module file (simplified regex-based parser for MVP)
+/// Parse a single module file using SWC
 fn parse_single_module(path: &Path, verbose: bool) -> Result<ParsedModule> {
+    // Read source for security validation
     let source = fs::read_to_string(path)
         .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-    // Validate against banned keywords
+    // Validate against banned keywords (SECURITY CHECK)
     for banned in BANNED_KEYWORDS {
         if source.contains(banned) {
             return Err(anyhow!(

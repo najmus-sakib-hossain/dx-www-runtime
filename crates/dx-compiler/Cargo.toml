@@ -17,9 +17,8 @@ console = "0.15"
 indicatif = "0.17"  # Loading bars
 
 # Parsing (The Heavy Lifting)
-# TODO: Re-enable SWC once serde compatibility is resolved
-# swc_core = { version = "0.106", features = ["common", "ecma_parser", "ecma_ast", "ecma_visit"] }
-# For now, using simplified regex-based parser
+# Using regex-based parser for MVP speed
+# Production will use OXC once API is stable
 regex = "1.10"
 
 # Serialization
