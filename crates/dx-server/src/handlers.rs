@@ -22,10 +22,7 @@ pub async fn serve_index(
     State(state): State<ServerState>,
     headers: axum::http::HeaderMap,
 ) -> impl IntoResponse {
-    let user_agent = headers
-        .get(header::USER_AGENT)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
+    let user_agent = headers.get(header::USER_AGENT).and_then(|v| v.to_str().ok()).unwrap_or("");
 
     // Detect Bot vs Human
     if ssr::is_bot(user_agent) {

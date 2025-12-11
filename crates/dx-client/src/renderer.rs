@@ -121,38 +121,38 @@ impl Renderer {
             OpType::Clone => {
                 let payload = self.read_payload::<ClonePayload>(data, &mut offset)?;
                 self.execute_clone(header.target_id, &payload)?;
-            },
+            }
             OpType::PatchText => {
                 let payload = self.read_payload::<PatchTextPayload>(data, &mut offset)?;
                 if let Some(ref s) = strings {
                     self.execute_patch_text(header.target_id, &payload, s)?;
                 }
-            },
+            }
             OpType::PatchAttr => {
                 let payload = self.read_payload::<PatchAttrPayload>(data, &mut offset)?;
                 if let Some(ref s) = strings {
                     self.execute_patch_attr(header.target_id, &payload, s)?;
                 }
-            },
+            }
             OpType::ClassToggle => {
                 let payload = self.read_payload::<ClassTogglePayload>(data, &mut offset)?;
                 if let Some(ref s) = strings {
                     self.execute_class_toggle(header.target_id, &payload, s)?;
                 }
-            },
+            }
             OpType::Remove => {
                 self.execute_remove(header.target_id)?;
-            },
+            }
             OpType::SetStyle => {
                 let payload = self.read_payload::<SetStylePayload>(data, &mut offset)?;
                 if let Some(ref s) = strings {
                     self.execute_set_style(header.target_id, &payload, s)?;
                 }
-            },
+            }
             OpType::BatchStart | OpType::BatchCommit => {
                 // Batch markers are no-ops in this implementation
                 // Future: could defer DOM writes until commit
-            },
+            }
         }
 
         Ok(offset)

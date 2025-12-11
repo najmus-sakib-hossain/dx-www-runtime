@@ -186,6 +186,12 @@ pub struct StatePatcher {
     binding_maps: std::collections::HashMap<u32, BindingMap>,
 }
 
+impl Default for StatePatcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StatePatcher {
     pub fn new() -> Self {
         Self {
@@ -223,7 +229,7 @@ impl StatePatcher {
                     &format!("No binding map for component {}", component_id).into(),
                 );
                 return ops;
-            },
+            }
         };
 
         // Iterate through each dirty bit
@@ -247,7 +253,7 @@ impl StatePatcher {
                         _ => {
                             // TODO: Implement ClassToggle and Style bindings
                             continue;
-                        },
+                        }
                     };
                     ops.push(op);
                 }
@@ -323,6 +329,12 @@ pub struct StateManager {
     patcher: StatePatcher,
 }
 
+impl Default for StateManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StateManager {
     pub fn new() -> Self {
         Self {
@@ -338,13 +350,13 @@ impl StateManager {
         let ops = self.patcher.patch(state);
 
         // Queue ops to dx-dom
-        for op in ops {
+        for _op in ops {
             #[cfg(target_arch = "wasm32")]
             match op.opcode {
                 x if x == OpCode::UpdateText as u8 => {
                     dx_dom::queue_update_text(op.arg1, op.arg2, op.arg3);
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
     }

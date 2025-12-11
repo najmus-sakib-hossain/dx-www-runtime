@@ -90,11 +90,13 @@ impl CapabilityManifest {
 pub struct MemoryManager {
     /// Pointer to the start of Linear Memory
     base_ptr: *mut u8,
-    /// Size of the allocated memory
+    /// Size of the allocated memory (reserved for future bounds checking)
+    #[allow(dead_code)]
     size: usize,
     /// Current write offset in State Region (atomic for thread safety)
     state_offset: AtomicU32,
-    /// Current write offset in Queue Region
+    /// Current write offset in Queue Region (reserved for future multi-threaded queue)
+    #[allow(dead_code)]
     queue_offset: AtomicU32,
 }
 

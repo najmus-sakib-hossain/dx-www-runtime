@@ -15,8 +15,15 @@ mod allocator;
 static ALLOC: allocator::BumpAlloc = allocator::BumpAlloc;
 
 #[panic_handler]
+#[cfg(target_arch = "wasm32")]
 fn panic(_: &core::panic::PanicInfo) -> ! {
     unsafe { core::arch::wasm32::unreachable() }
+}
+
+#[panic_handler]
+#[cfg(not(target_arch = "wasm32"))]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }
 
 // ============================================================================
@@ -106,7 +113,7 @@ pub extern "C" fn render_stream(ptr: *const u8, len: u32) -> u32 {
                     // Clone and append to root
                     let node_handle = host_clone_template(template_id);
                     host_append(root_handle, node_handle);
-                },
+                }
 
                 OP_PATCH_TEXT => {
                     // Read: node_id (2 bytes) + text_len (2 bytes) + text
@@ -118,7 +125,7 @@ pub extern "C" fn render_stream(ptr: *const u8, len: u32) -> u32 {
                     offset += text_len;
 
                     host_set_text(node_id, text_ptr, text_len);
-                },
+                }
 
                 OP_PATCH_ATTR => {
                     // Read: node_id + key_len + key + val_len + val
@@ -134,7 +141,7 @@ pub extern "C" fn render_stream(ptr: *const u8, len: u32) -> u32 {
                     offset += val_len;
 
                     host_set_attr(node_id, key_ptr, key_len, val_ptr, val_len);
-                },
+                }
 
                 OP_CLASS_TOGGLE => {
                     // Read: node_id + class_len + class + enable
@@ -148,19 +155,19 @@ pub extern "C" fn render_stream(ptr: *const u8, len: u32) -> u32 {
                     offset += 1;
 
                     host_toggle_class(node_id, class_ptr, class_len, enable);
-                },
+                }
 
                 OP_REMOVE => {
                     let node_id = read_u16(ptr, offset) as u32;
                     offset += 2;
 
                     host_remove(node_id);
-                },
+                }
 
                 _ => {
                     // Unknown opcode, skip
                     break;
-                },
+                }
             }
         }
     }

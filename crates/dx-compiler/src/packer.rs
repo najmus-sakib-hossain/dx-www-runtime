@@ -10,7 +10,7 @@
 //! - **Section 3:** WASM Blob (Optimized)
 
 use anyhow::{Context, Result};
-use bincode::{config};
+use bincode::config;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 use std::fs::{self, File};
@@ -20,7 +20,7 @@ use std::path::Path;
 use crate::splitter::Template;
 
 // Re-export shared types
-pub use dx_packet::{DxbArtifact, CapabilitiesManifest};
+pub use dx_packet::{CapabilitiesManifest, DxbArtifact};
 
 /// Magic bytes for .dxb format
 const MAGIC_BYTES: &[u8] = b"DX";

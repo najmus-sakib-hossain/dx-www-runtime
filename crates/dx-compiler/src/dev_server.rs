@@ -19,11 +19,10 @@ pub async fn start(entry: PathBuf, port: u16, verbose: bool) -> Result<()> {
 
     let mut watcher: RecommendedWatcher =
         notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
-            if let Ok(event) = res {
-                if let Err(e) = tx.blocking_send(event) {
+            if let Ok(event) = res
+                && let Err(e) = tx.blocking_send(event) {
                     eprintln!("Failed to send event: {}", e);
                 }
-            }
         })
         .context("Failed to create file watcher")?;
 
@@ -59,7 +58,7 @@ pub async fn start(entry: PathBuf, port: u16, verbose: bool) -> Result<()> {
 
                             // Calculate delta
                             let mut last = last_build.lock().await;
-                            let delta = calculate_delta(&*last, &new_build);
+                            let delta = calculate_delta(&last, &new_build);
                             *last = new_build;
 
                             // Send delta to connected clients

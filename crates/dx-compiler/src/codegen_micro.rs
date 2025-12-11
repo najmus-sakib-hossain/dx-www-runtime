@@ -75,7 +75,7 @@ impl StringInterner {
     /// Generate all static string declarations
     fn generate_statics(&self) -> String {
         let mut lines = Vec::new();
-        
+
         // Sort for deterministic output
         let mut entries: Vec<_> = self.strings.iter().collect();
         entries.sort_by_key(|(_, name)| name.as_str());
@@ -83,10 +83,7 @@ impl StringInterner {
         for (content, name) in entries {
             // Escape the string content for Rust
             let escaped = content.replace('\\', "\\\\").replace('"', "\\\"");
-            lines.push(format!(
-                "static {}: &[u8] = b\"{}\";",
-                name, escaped
-            ));
+            lines.push(format!("static {}: &[u8] = b\"{}\";", name, escaped));
         }
 
         lines.join("\n")
@@ -145,12 +142,8 @@ impl EventIndex {
         for (expr, id) in entries {
             // Generate the handler call
             // For now, just call the expression as a function
-            let handler_name = expr
-                .replace("()", "")
-                .replace("=> ", "")
-                .trim()
-                .to_string();
-            
+            let handler_name = expr.replace("()", "").replace("=> ", "").trim().to_string();
+
             lines.push(format!("        {} => {{ /* {} */ }},", id, handler_name));
         }
 
@@ -254,9 +247,15 @@ pub fn generate_micro(
     output.push("".to_string());
 
     // FFI imports
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("// FFI: JavaScript Host Functions".to_string());
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("".to_string());
     output.push("extern \"C\" {".to_string());
     output.push("    fn host_create_element(tag_ptr: *const u8, tag_len: u32) -> u32;".to_string());
@@ -264,7 +263,10 @@ pub fn generate_micro(
     output.push("    fn host_set_text(node_id: u32, ptr: *const u8, len: u32);".to_string());
     output.push("    fn host_set_attr(node_id: u32, k_ptr: *const u8, k_len: u32, v_ptr: *const u8, v_len: u32);".to_string());
     output.push("    fn host_append(parent_id: u32, child_id: u32);".to_string());
-    output.push("    fn host_add_event_listener(node_id: u32, event_type: u32, handler_id: u32);".to_string());
+    output.push(
+        "    fn host_add_event_listener(node_id: u32, event_type: u32, handler_id: u32);"
+            .to_string(),
+    );
     output.push("    fn host_remove(node_id: u32);".to_string());
     output.push("}".to_string());
     output.push("".to_string());
@@ -278,27 +280,45 @@ pub fn generate_micro(
     output.push("".to_string());
 
     // Static strings section
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("// Static Strings (Interned)".to_string());
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("".to_string());
     output.push(interner.generate_statics());
     output.push("".to_string());
 
     // State statics
     if !schemas.is_empty() {
-        output.push("// ============================================================================".to_string());
+        output.push(
+            "// ============================================================================"
+                .to_string(),
+        );
         output.push("// Component State".to_string());
-        output.push("// ============================================================================".to_string());
+        output.push(
+            "// ============================================================================"
+                .to_string(),
+        );
         output.push("".to_string());
         output.push(generate_state_statics(schemas));
         output.push("".to_string());
     }
 
     // Init function
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("// WASM Exports".to_string());
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("".to_string());
     output.push("#[no_mangle]".to_string());
     output.push("pub extern \"C\" fn init() -> u32 {".to_string());
@@ -311,13 +331,13 @@ pub fn generate_micro(
     output.push("#[no_mangle]".to_string());
     output.push("pub extern \"C\" fn render() {".to_string());
     output.push("    unsafe {".to_string());
-    
+
     for line in &render_body {
         for l in line.lines() {
             output.push(format!("        {}", l));
         }
     }
-    
+
     output.push("    }".to_string());
     output.push("}".to_string());
     output.push("".to_string());
@@ -350,7 +370,7 @@ fn generate_template_code(
     // Parse the template HTML to extract tag name and attributes
     // This is a simplified parser - production would use proper HTML parser
     let html = &template.html;
-    
+
     // Extract tag name (first word after <)
     let tag_name = extract_tag_name(html);
     let tag_var = interner.intern(&tag_name);
@@ -366,7 +386,7 @@ fn generate_template_code(
             _ => c,
         })
         .collect();
-    
+
     lines.push(format!("// Template {}: {}", template.id, sanitized_html));
     lines.push(format!(
         "let {} = host_create_element({}.as_ptr(), {}.len() as u32);",
@@ -378,7 +398,7 @@ fn generate_template_code(
     for (key, value) in attrs {
         let key_var = interner.intern(&key);
         let val_var = interner.intern(&value);
-        
+
         lines.push(format!(
             "host_set_attr({}, {}.as_ptr(), {}.len() as u32, {}.as_ptr(), {}.len() as u32);",
             node_var, key_var, key_var, val_var, val_var
@@ -392,15 +412,12 @@ fn generate_template_code(
 }
 
 /// Generate Rust code for a binding (dynamic content)
-fn generate_binding_code(
-    binding: &Binding,
-    _interner: &mut StringInterner,
-) -> Result<String> {
+fn generate_binding_code(binding: &Binding, _interner: &mut StringInterner) -> Result<String> {
     let mut lines = Vec::new();
 
     // Check if this is an event handler (contains =>) or a regular state binding
     let expr = &binding.expression;
-    
+
     if expr.contains("=>") || expr.contains("set") {
         // Event handler - will be wired through on_event dispatcher
         // Sanitize for comment
@@ -420,7 +437,7 @@ fn generate_binding_code(
             .filter(|c| c.is_alphanumeric() || *c == '_')
             .collect::<String>()
             .to_uppercase();
-        
+
         if !rust_var.is_empty() {
             lines.push(format!("// Slot {}: state binding", binding.slot_id));
             // Generate actual host_set_text call (placeholder node_id for now)
@@ -484,10 +501,10 @@ fn extract_attributes(html: &str) -> Vec<(String, String)> {
             // Check for = and value
             if chars.peek() == Some(&'=') {
                 chars.next(); // consume =
-                
+
                 // Get quote type
-                if let Some(&quote) = chars.peek() {
-                    if quote == '"' || quote == '\'' {
+                if let Some(&quote) = chars.peek()
+                    && (quote == '"' || quote == '\'') {
                         chars.next(); // consume opening quote
                         let mut value = String::new();
                         while let Some(&vc) = chars.peek() {
@@ -497,13 +514,12 @@ fn extract_attributes(html: &str) -> Vec<(String, String)> {
                             }
                             value.push(chars.next().unwrap());
                         }
-                        
+
                         // Skip JSX expressions {..}
                         if !value.starts_with('{') {
                             attrs.push((key, value));
                         }
                     }
-                }
             }
         }
     }
@@ -518,11 +534,11 @@ mod tests {
     #[test]
     fn test_string_interner() {
         let mut interner = StringInterner::new();
-        
+
         let name1 = interner.intern("div");
         let name2 = interner.intern("div");
         let name3 = interner.intern("span");
-        
+
         assert_eq!(name1, name2, "Same string should return same name");
         assert_ne!(name1, name3, "Different strings should have different names");
     }
@@ -546,11 +562,11 @@ mod tests {
     #[test]
     fn test_event_index() {
         let mut events = EventIndex::new();
-        
+
         let id1 = events.register("handleClick");
         let id2 = events.register("handleSubmit");
         let id3 = events.register("handleClick"); // duplicate
-        
+
         assert_eq!(id1, 0);
         assert_eq!(id2, 1);
         assert_eq!(id3, 0, "Duplicate handler should return same ID");
@@ -560,7 +576,7 @@ mod tests {
     fn test_generate_micro_empty() {
         let result = generate_micro(&[], &[], &[], false);
         assert!(result.is_ok());
-        
+
         let code = result.unwrap();
         assert!(code.contains("#![no_std]"));
         assert!(code.contains("extern \"C\""));

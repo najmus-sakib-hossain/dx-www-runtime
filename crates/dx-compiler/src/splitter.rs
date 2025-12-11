@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use crate::parser::{Component, ParsedModule};
 
 // Re-export shared types from dx-packet
-pub use dx_packet::{Template, SlotDef, SlotType};
+pub use dx_packet::{SlotDef, SlotType, Template};
 
 /// Binding from Slot to Rust expression
 #[derive(Debug, Clone, Serialize, Deserialize)]

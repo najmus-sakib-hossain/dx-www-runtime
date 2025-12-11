@@ -24,16 +24,14 @@ use std::collections::HashMap;
 
 /// State data for template inflation
 /// Represents dynamic values to inject into slots
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct StateData {
     pub slot_values: HashMap<u32, String>,
 }
 
 impl StateData {
     pub fn new() -> Self {
-        Self {
-            slot_values: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn set(&mut self, slot_id: u32, value: String) {
@@ -76,7 +74,7 @@ pub fn inflate_html(template: &Template, state: &StateData) -> String {
     // Replace all slots with state values
     for slot in &template.slots {
         let marker = format!("<!--SLOT_{}-->", slot.slot_id);
-        
+
         if let Some(value) = state.get(slot.slot_id) {
             result = result.replace(&marker, value);
         } else {
@@ -117,7 +115,9 @@ pub fn inflate_page(
     html.push_str("<html lang=\"en\">\n");
     html.push_str("<head>\n");
     html.push_str("    <meta charset=\"UTF-8\">\n");
-    html.push_str("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+    html.push_str(
+        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+    );
     html.push_str(&format!("    <title>{}</title>\n", escape_html(title)));
 
     // Inject meta tags
@@ -315,9 +315,6 @@ mod tests {
     fn test_html_escaping() {
         let input = "<script>alert('xss')</script>";
         let escaped = escape_html(input);
-        assert_eq!(
-            escaped,
-            "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;"
-        );
+        assert_eq!(escaped, "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;");
     }
 }

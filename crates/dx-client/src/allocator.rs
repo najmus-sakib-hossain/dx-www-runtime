@@ -16,7 +16,10 @@ unsafe impl GlobalAlloc for BumpAlloc {
 
         // Security: Crash if OOM to prevent memory corruption
         if end > HEAP_SIZE {
+            #[cfg(target_arch = "wasm32")]
             core::arch::wasm32::unreachable();
+            #[cfg(not(target_arch = "wasm32"))]
+            panic!("Heap OOM");
         }
 
         POINTER = end;

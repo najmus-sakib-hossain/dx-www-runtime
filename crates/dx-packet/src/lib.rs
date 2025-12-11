@@ -290,7 +290,10 @@ use serde::{Deserialize, Serialize};
 
 /// Template definition for static HTML structure
 /// Used by Compiler (Writer) and Server (Reader)
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[cfg_attr(
+    feature = "std",
+    derive(Serialize, Deserialize, bincode::Encode, bincode::Decode)
+)]
 #[derive(Debug, Clone)]
 pub struct Template {
     pub id: u32,
@@ -300,7 +303,10 @@ pub struct Template {
 }
 
 /// Slot definition for dynamic content
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[cfg_attr(
+    feature = "std",
+    derive(Serialize, Deserialize, bincode::Encode, bincode::Decode)
+)]
 #[derive(Debug, Clone)]
 pub struct SlotDef {
     pub slot_id: u32,
@@ -308,7 +314,10 @@ pub struct SlotDef {
     pub path: alloc::vec::Vec<u32>, // DOM path
 }
 
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[cfg_attr(
+    feature = "std",
+    derive(Serialize, Deserialize, bincode::Encode, bincode::Decode)
+)]
 #[derive(Debug, Clone)]
 pub enum SlotType {
     Text,      // Text node content
@@ -318,7 +327,10 @@ pub enum SlotType {
 }
 
 /// .dxb file structure container
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[cfg_attr(
+    feature = "std",
+    derive(Serialize, Deserialize, bincode::Encode, bincode::Decode)
+)]
 #[derive(Debug)]
 pub struct DxbArtifact {
     pub version: u8,
@@ -328,8 +340,12 @@ pub struct DxbArtifact {
 }
 
 /// Capabilities manifest for security
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, bincode::Encode, bincode::Decode))]
+#[cfg_attr(
+    feature = "std",
+    derive(Serialize, Deserialize, bincode::Encode, bincode::Decode)
+)]
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct CapabilitiesManifest {
     pub network: bool,
     pub storage: bool,
@@ -339,15 +355,3 @@ pub struct CapabilitiesManifest {
     pub signature: alloc::vec::Vec<u8>,
 }
 
-impl Default for CapabilitiesManifest {
-    fn default() -> Self {
-        Self {
-            network: false,
-            storage: false,
-            geolocation: false,
-            camera: false,
-            microphone: false,
-            signature: alloc::vec::Vec::new(),
-        }
-    }
-}

@@ -236,7 +236,7 @@ impl BatchCloner {
                             web_sys::console::warn_1(
                                 &format!("Unknown opcode: {}", op.opcode).into(),
                             );
-                        },
+                        }
                     }
                 }
 
@@ -265,10 +265,9 @@ impl BatchCloner {
 
                 // Process removals
                 for op in remove_ops {
-                    if let Some(node) = registry.remove(op.arg1) {
-                        if let Some(parent) = node.parent_node() {
-                            parent.remove_child(&node).ok();
-                        }
+                    if let Some(node) = registry.remove(op.arg1) &&
+                       let Some(parent) = node.parent_node() {
+                        let _ = parent.remove_child(&node);
                     }
                 }
 
@@ -282,9 +281,7 @@ impl BatchCloner {
         let window = window().expect("no window");
         let document = window.document().expect("no document");
 
-        let old_fragment =
-            std::mem::replace(&mut self.fragment, document.create_document_fragment());
-        old_fragment
+        std::mem::replace(&mut self.fragment, document.create_document_fragment())
     }
 }
 

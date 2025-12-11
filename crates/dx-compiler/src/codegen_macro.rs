@@ -33,39 +33,39 @@ const LAYOUT_VERSION: u8 = 1;
 /// Serialize templates to layout.bin
 pub fn serialize_layout(templates: &[Template], output_dir: &Path) -> Result<()> {
     let layout_path = output_dir.join("layout.bin");
-    
+
     let mut data = Vec::new();
-    
+
     // Header
     data.extend(&LAYOUT_MAGIC.to_le_bytes());
     data.push(LAYOUT_VERSION);
     data.push(0); // reserved
     data.extend(&(templates.len() as u16).to_le_bytes());
-    
+
     // Template entries: [id: u16, html_offset: u32, html_len: u16, slot_count: u8, reserved: u8]
     let mut html_data: Vec<u8> = Vec::new();
     let mut entries: Vec<u8> = Vec::new();
-    
+
     for template in templates {
         let offset = html_data.len() as u32;
         let html_bytes = template.html.as_bytes();
         let len = html_bytes.len() as u16;
-        
+
         entries.extend(&(template.id as u16).to_le_bytes());
         entries.extend(&offset.to_le_bytes());
         entries.extend(&len.to_le_bytes());
         entries.push(template.slots.len() as u8);
         entries.push(0); // reserved
-        
+
         html_data.extend(html_bytes);
     }
-    
+
     // Write entries then data
     data.extend(&entries);
     data.extend(&html_data);
-    
+
     std::fs::write(&layout_path, &data)?;
-    
+
     Ok(())
 }
 
@@ -98,7 +98,7 @@ pub fn generate_macro(
     output.push("#![no_std]".to_string());
     output.push("#![no_main]".to_string());
     output.push("".to_string());
-    
+
     // Panic handler
     output.push("#[panic_handler]".to_string());
     output.push("fn panic(_: &core::panic::PanicInfo) -> ! {".to_string());
@@ -107,9 +107,15 @@ pub fn generate_macro(
     output.push("".to_string());
 
     // FFI imports for Macro mode (HTIP-based)
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("// FFI: JavaScript Host Functions (HTIP Protocol)".to_string());
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("".to_string());
     output.push("extern \"C\" {".to_string());
     output.push("    /// Clone template by ID, returns node handle".to_string());
@@ -117,7 +123,9 @@ pub fn generate_macro(
     output.push("    /// Append child to parent".to_string());
     output.push("    fn host_append(parent_id: u32, child_id: u32);".to_string());
     output.push("    /// Set text by slot ID".to_string());
-    output.push("    fn host_patch_slot(node_id: u32, slot_id: u32, ptr: *const u8, len: u32);".to_string());
+    output.push(
+        "    fn host_patch_slot(node_id: u32, slot_id: u32, ptr: *const u8, len: u32);".to_string(),
+    );
     output.push("    /// Queue render batch".to_string());
     output.push("    fn host_flush_render();".to_string());
     output.push("    /// Get shared memory pointer".to_string());
@@ -126,9 +134,15 @@ pub fn generate_macro(
     output.push("".to_string());
 
     // Template ID constants
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("// Template IDs".to_string());
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("".to_string());
     for template in templates {
         let name = format!("TEMPLATE_{}", template.id);
@@ -143,12 +157,19 @@ pub fn generate_macro(
     }
 
     // Generate slot binding constants
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("// Slot Bindings".to_string());
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("".to_string());
     for binding in bindings {
-        let sanitized_expr: String = binding.expression
+        let sanitized_expr: String = binding
+            .expression
             .chars()
             .take(50)
             .map(|c| match c {
@@ -164,9 +185,15 @@ pub fn generate_macro(
     output.push("".to_string());
 
     // Init function
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("// WASM Exports".to_string());
-    output.push("// ============================================================================".to_string());
+    output.push(
+        "// ============================================================================"
+            .to_string(),
+    );
     output.push("".to_string());
     output.push("#[no_mangle]".to_string());
     output.push("pub extern \"C\" fn init() -> u32 {".to_string());
@@ -183,7 +210,7 @@ pub fn generate_macro(
     output.push("#[no_mangle]".to_string());
     output.push("pub extern \"C\" fn render() {".to_string());
     output.push("    unsafe {".to_string());
-    
+
     for template in templates {
         output.push(format!(
             "        let node_{} = host_clone_template(TEMPLATE_{});",
@@ -191,7 +218,7 @@ pub fn generate_macro(
         ));
         output.push(format!("        host_append(0, node_{});", template.id));
     }
-    
+
     output.push("        host_flush_render();".to_string());
     output.push("    }".to_string());
     output.push("}".to_string());
@@ -203,15 +230,17 @@ pub fn generate_macro(
     output.push("pub extern \"C\" fn update() {".to_string());
     output.push("    unsafe {".to_string());
     output.push("        // Read from shared buffer and patch slots".to_string());
-    
+
     for binding in bindings {
-        let var_name = binding.expression
+        let var_name = binding
+            .expression
             .replace("self.", "")
             .chars()
             .filter(|c| c.is_alphanumeric() || *c == '_')
             .collect::<String>()
             .to_uppercase();
-        let sanitized_expr: String = binding.expression
+        let sanitized_expr: String = binding
+            .expression
             .chars()
             .take(50)
             .map(|c| match c {
@@ -219,17 +248,14 @@ pub fn generate_macro(
                 _ => c,
             })
             .collect();
-            
-        output.push(format!(
-            "        // Patch slot {} with {}",
-            binding.slot_id, sanitized_expr
-        ));
+
+        output.push(format!("        // Patch slot {} with {}", binding.slot_id, sanitized_expr));
         output.push(format!(
             "        // host_patch_slot(node_id, SLOT_{}, {}_PTR, {}_LEN);",
             binding.slot_id, var_name, var_name
         ));
     }
-    
+
     output.push("        host_flush_render();".to_string());
     output.push("    }".to_string());
     output.push("}".to_string());
@@ -257,35 +283,35 @@ pub fn generate_macro(
 /// Generate a state struct for a component
 fn generate_state_struct(schema: &StateSchema) -> Result<String> {
     let mut lines = Vec::new();
-    
+
     let struct_name = format!("{}State", schema.component);
-    
+
     lines.push(format!("/// State for {} component", schema.component));
     lines.push("#[repr(C)]".to_string());
     lines.push(format!("pub struct {} {{", struct_name));
-    
+
     for field in &schema.fields {
         let rust_type = type_to_rust(&field.type_name);
         lines.push(format!("    pub {}: {},", field.name, rust_type));
     }
-    
+
     lines.push("}".to_string());
     lines.push("".to_string());
-    
+
     // Default impl
     lines.push(format!("impl Default for {} {{", struct_name));
     lines.push("    fn default() -> Self {".to_string());
     lines.push("        Self {".to_string());
-    
+
     for field in &schema.fields {
         let default_val = default_value(&field.type_name, &field.initial_value);
         lines.push(format!("            {}: {},", field.name, default_val));
     }
-    
+
     lines.push("        }".to_string());
     lines.push("    }".to_string());
     lines.push("}".to_string());
-    
+
     Ok(lines.join("\n"))
 }
 
@@ -308,7 +334,7 @@ fn default_value(ts_type: &str, initial: &str) -> String {
             _ => "0".to_string(),
         };
     }
-    
+
     if initial == "[]" {
         return "0".to_string(); // Pointers/handles use 0 as null
     }
@@ -330,7 +356,7 @@ mod tests {
     fn test_generate_macro_empty() {
         let result = generate_macro(&[], &[], &[], false);
         assert!(result.is_ok());
-        
+
         let code = result.unwrap();
         assert!(code.contains("#![no_std]"));
         assert!(code.contains("host_clone_template"));
@@ -342,19 +368,17 @@ mod tests {
     fn test_generate_state_struct() {
         let schema = StateSchema {
             component: "Counter".to_string(),
-            fields: vec![
-                StateField {
-                    name: "count".to_string(),
-                    type_name: "number".to_string(),
-                    initial_value: "0".to_string(),
-                    dirty_bit: 0,
-                },
-            ],
+            fields: vec![StateField {
+                name: "count".to_string(),
+                type_name: "number".to_string(),
+                initial_value: "0".to_string(),
+                dirty_bit: 0,
+            }],
         };
 
         let result = generate_state_struct(&schema);
         assert!(result.is_ok());
-        
+
         let code = result.unwrap();
         assert!(code.contains("pub struct CounterState"));
         assert!(code.contains("pub count: i32"));
@@ -376,7 +400,7 @@ mod tests {
 
         let layout_path = temp_dir.join("layout.bin");
         assert!(layout_path.exists());
-        
+
         let data = std::fs::read(&layout_path).unwrap();
         assert_eq!(&data[0..4], &LAYOUT_MAGIC.to_le_bytes());
     }

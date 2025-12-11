@@ -81,7 +81,7 @@ impl HtipEngine {
         match op {
             Operation::TemplateDef(def) => {
                 self.register_template(def.id, def.html_string_id)?;
-            },
+            }
             Operation::Instantiate(inst) => {
                 self.instantiate_template(
                     inst.instance_id,
@@ -89,10 +89,10 @@ impl HtipEngine {
                     inst.parent_id,
                     root,
                 )?;
-            },
+            }
             Operation::PatchText(patch) => {
                 self.patch_text(patch.instance_id, patch.slot_id, patch.string_id)?;
-            },
+            }
             Operation::PatchAttr(patch) => {
                 self.patch_attr(
                     patch.instance_id,
@@ -100,31 +100,31 @@ impl HtipEngine {
                     patch.attr_name_id,
                     patch.value_id,
                 )?;
-            },
+            }
             Operation::PatchClassToggle(toggle) => {
                 self.toggle_class(toggle.instance_id, toggle.class_name_id, toggle.enabled)?;
-            },
+            }
             Operation::AttachEvent(event) => {
                 // Event handling requires JS callbacks - skip for now
                 web_sys::console::warn_1(
                     &format!("AttachEvent not yet implemented: {:?}", event).into(),
                 );
-            },
+            }
             Operation::RemoveNode(remove) => {
                 self.remove_node(remove.instance_id)?;
-            },
+            }
             Operation::BatchStart(_) => {
                 // Batching is transparent - no action needed
-            },
+            }
             Operation::BatchCommit(_) => {
                 // Batching is transparent - no action needed
-            },
+            }
             Operation::SetProperty(prop) => {
                 self.set_property(prop.instance_id, prop.prop_name_id, &prop.value)?;
-            },
+            }
             Operation::AppendChild(append) => {
                 self.append_child(append.parent_id, append.child_id)?;
-            },
+            }
         }
         Ok(())
     }
@@ -356,7 +356,7 @@ impl HtipEngine {
             PropertyValue::String(id) => {
                 let s = self.get_string(*id)?;
                 JsValue::from_str(s)
-            },
+            }
             PropertyValue::Number(n) => JsValue::from_f64(*n),
             PropertyValue::Boolean(b) => JsValue::from_bool(*b),
             PropertyValue::Null => JsValue::NULL,

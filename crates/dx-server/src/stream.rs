@@ -42,13 +42,14 @@ impl BinaryChunk {
 }
 
 /// Stream manager for binary payloads
+#[derive(Default)]
 pub struct BinaryStreamer {
     chunks: Vec<BinaryChunk>,
 }
 
 impl BinaryStreamer {
     pub fn new() -> Self {
-        Self { chunks: Vec::new() }
+        Self::default()
     }
 
     /// Add a chunk to the stream

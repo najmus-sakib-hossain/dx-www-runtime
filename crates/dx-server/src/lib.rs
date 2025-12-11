@@ -35,10 +35,7 @@ pub mod handlers;
 pub mod ssr;
 pub mod stream;
 
-use axum::{
-    routing::get,
-    Router,
-};
+use axum::{routing::get, Router};
 use dashmap::DashMap;
 use dx_packet::Template;
 use std::net::SocketAddr;
@@ -54,6 +51,12 @@ pub struct ServerState {
     pub template_cache: Arc<DashMap<u32, Template>>,
     /// Version hashes for delta patching
     pub version_cache: Arc<DashMap<String, String>>,
+}
+
+impl Default for ServerState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ServerState {
@@ -75,9 +78,9 @@ impl ServerState {
             let bytes = std::fs::read(&layout_path)?;
             let config = bincode::config::standard();
             let templates: Vec<Template> = bincode::decode_from_slice(&bytes, config)?.0;
-            
+
             tracing::info!("  ✓ Loaded {} templates", templates.len());
-            
+
             // Populate cache with full Template structs
             for template in templates {
                 self.template_cache.insert(template.id, template);
