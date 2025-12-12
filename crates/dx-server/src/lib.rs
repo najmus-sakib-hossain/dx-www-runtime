@@ -54,6 +54,8 @@ pub struct ServerState {
     pub version_store: Arc<std::sync::Mutex<delta::VersionStore>>,
     /// Current version hash (artifact name -> hash)
     pub current_version: Arc<DashMap<String, String>>,
+    /// Project directory for serving static files (index.html, etc.)
+    pub project_dir: Arc<std::sync::RwLock<Option<std::path::PathBuf>>>,
 }
 
 impl Default for ServerState {
@@ -69,6 +71,7 @@ impl ServerState {
             template_cache: Arc::new(DashMap::new()),
             version_store: Arc::new(std::sync::Mutex::new(delta::VersionStore::new(5))),
             current_version: Arc::new(DashMap::new()),
+            project_dir: Arc::new(std::sync::RwLock::new(None)),
         }
     }
 
@@ -133,6 +136,12 @@ impl ServerState {
         let id = template.id;
         self.template_cache.insert(id, template);
         tracing::debug!("📄 Registered template {}", id);
+    }
+
+    /// Set project directory for serving static files
+    pub fn set_project_dir(&self, dir: std::path::PathBuf) {
+        tracing::info!("📁 Project directory: {}", dir.display());
+        *self.project_dir.write().unwrap() = Some(dir);
     }
 }
 

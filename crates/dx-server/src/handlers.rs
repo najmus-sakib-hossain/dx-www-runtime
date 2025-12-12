@@ -32,7 +32,7 @@ pub async fn serve_index(
 
     // Serve SPA shell for humans
     tracing::debug!("👤 Human detected, serving SPA shell");
-    serve_spa_shell().into_response()
+    serve_spa_shell(state).into_response()
 }
 
 /// Serve SSR-inflated HTML for bots
@@ -71,10 +71,28 @@ async fn serve_ssr(state: ServerState) -> impl IntoResponse {
 }
 
 /// Serve SPA shell for humans (fast client-side hydration)
-fn serve_spa_shell() -> Html<&'static str> {
-    // In production, this would serve the actual built index.html
-    // For now, use the demo file
-    Html(include_str!("../../../examples/hello-world/demo.html"))
+fn serve_spa_shell(state: ServerState) -> impl IntoResponse {
+    // Try to serve index.html from project directory
+    if let Some(project_dir) = state.project_dir.read().unwrap().as_ref() {
+        let index_path = project_dir.join("index.html");
+        if index_path.exists() {
+            match std::fs::read_to_string(&index_path) {
+                Ok(html) => {
+                    tracing::debug!("✅ Serving index.html from {}", index_path.display());
+                    return Html(html).into_response();
+                }
+                Err(e) => {
+                    tracing::error!("Failed to read index.html: {}", e);
+                }
+            }
+        } else {
+            tracing::warn!("index.html not found at {}", index_path.display());
+        }
+    }
+    
+    // Fallback to demo HTML
+    tracing::debug!("Using demo HTML (index.html not found in project)");
+    Html(include_str!("../../../examples/hello-world/demo.html")).into_response()
 }
 
 /// Stream binary artifacts (Day 16: The Binary Streamer)

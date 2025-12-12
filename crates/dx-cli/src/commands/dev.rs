@@ -201,6 +201,10 @@ async fn start_server(addr: &str) -> Result<()> {
     // Create server state and load artifacts
     let state = dx_server::ServerState::new();
     
+    // Set project directory (current directory)
+    let current_dir = std::env::current_dir()?;
+    state.set_project_dir(current_dir);
+    
     // Load compiled artifacts from .dx-cache
     let cache_path = Path::new(".dx-cache");
     if cache_path.exists() {
