@@ -87,8 +87,8 @@ pub async fn execute(release: bool, output: PathBuf, skip_optimize: bool) -> Res
 }
 
 /// Compile TypeScript using dx-compiler
-async fn compile_typescript(config: &ProjectConfig) -> Result<()> {
-    use dx_compiler::Compiler;
+async fn compile_typescript(_config: &ProjectConfig) -> Result<()> {
+    // use dx_compiler::Compiler;  // TODO: Enable when dx-compiler exports lib
 
     // TODO: Actually compile
     // For now, simulate
@@ -98,7 +98,7 @@ async fn compile_typescript(config: &ProjectConfig) -> Result<()> {
 }
 
 /// Generate WASM binary
-async fn generate_wasm(config: &ProjectConfig, release: bool) -> Result<()> {
+async fn generate_wasm(_config: &ProjectConfig, _release: bool) -> Result<()> {
     // TODO: Call wasm-pack or cargo build --target wasm32-unknown-unknown
     tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
 
@@ -205,7 +205,7 @@ async fn show_bundle_sizes(output: &PathBuf) -> Result<()> {
     );
 
     // Show comparison
-    if total_size < 50_000 {
+    if total_size > 0 && total_size < 50_000 {
         println!();
         println!("  {} That's {}× smaller than React!", 
             style("🎉").bold(),

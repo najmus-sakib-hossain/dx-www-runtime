@@ -16,7 +16,6 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use console::style;
 use std::path::PathBuf;
-use tracing::{info, warn};
 
 mod commands;
 mod config;
@@ -188,9 +187,9 @@ async fn show_info() -> Result<()> {
     
     println!("{}", style("📦 Project Information").bold());
     println!();
-    println!("  {}: {}", style("Name").bold(), config.name);
-    println!("  {}: {}", style("Version").bold(), config.version);
-    println!("  {}: {}", style("Runtime").bold(), config.runtime);
+    println!("  {}: {}", style("Name").bold(), config.name());
+    println!("  {}: {}", style("Version").bold(), config.version());
+    println!("  {}: {}", style("Runtime").bold(), config.runtime());
     println!();
     println!("{}", style("📊 Build Status").bold());
     println!();
