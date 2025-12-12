@@ -152,6 +152,8 @@ pub fn build_router(state: ServerState) -> Router {
         .route("/", get(handlers::serve_index))
         // Health check
         .route("/health", get(handlers::health_check))
+        // Favicon (prevent 404)
+        .route("/favicon.ico", get(handlers::serve_favicon))
         // Binary streaming endpoint (Day 16: The Binary Streamer)
         .route("/stream/:app_id", get(handlers::serve_binary_stream))
         // Delta endpoints (Day 17)
