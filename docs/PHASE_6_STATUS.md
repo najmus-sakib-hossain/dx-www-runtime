@@ -36,8 +36,8 @@ fetch('/app.dxb')
 │ Day     │ Mission                  │ Status  │ Deliverable      │
 ├─────────┼──────────────────────────┼─────────┼──────────────────┤
 │ Day 12  │ Stream Consumer          │ ✅ DONE │ Incremental Parser│
-│ Day 13  │ Client Patcher           │ ⏳ TODO │ XOR Block Diff    │
-│ Day 14  │ Eternal Cache (IndexedDB)│ ⏳ TODO │ ETag Negotiation  │
+│ Day 13  │ Client Patcher           │ ✅ DONE │ XOR Block Diff    │
+│ Day 14  │ Eternal Cache (IndexedDB)│ ⏳ NEXT │ ETag Negotiation  │
 └─────────┴──────────────────────────┴─────────┴──────────────────┘
 ```
 

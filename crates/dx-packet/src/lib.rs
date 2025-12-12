@@ -376,6 +376,9 @@ impl ChunkType {
     }
 }
 
+/// Block size for XOR patching (4KB - cache friendly)
+pub const BLOCK_SIZE: usize = 4096;
+
 /// Chunk header for binary streaming
 /// Total size: 5 bytes (1 type + 4 length)
 #[repr(C)]

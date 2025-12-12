@@ -33,12 +33,14 @@ use dx_packet::*;
 use wasm_bindgen::prelude::*;
 
 mod node_registry;
+mod patcher;
 mod renderer;
 mod stream_reader;
 mod string_table;
 mod template_cache;
 
 pub use node_registry::NodeRegistry;
+pub use patcher::{Patcher, PATCH_BLOCK_SIZE};
 pub use renderer::Renderer;
 pub use stream_reader::{ChunkDispatcher, StreamReader};
 pub use string_table::StringTableReader;
@@ -52,6 +54,7 @@ use core::cell::RefCell;
 
 thread_local! {
     static RENDERER: RefCell<Option<Renderer>> = RefCell::new(None);
+    static PATCHER: RefCell<Option<Patcher>> = RefCell::new(None);
 }
 
 // ============================================================================
@@ -123,7 +126,7 @@ pub fn reset() {
 }
 
 // ============================================================================
-// CHUNKED STREAMING API (Phase 6: Day 12)
+// CHUNKED STREAMING API (Phase 6: Day 12 & 13)
 // ============================================================================
 
 thread_local! {
@@ -228,4 +231,93 @@ pub fn finalize_stream() -> Result<(), u8> {
     }
 
     Ok(())
+}
+
+// ============================================================================
+// PATCHER EXPORTS (Day 13)
+// ============================================================================
+
+/// Initialize patcher
+#[wasm_bindgen]
+pub fn init_patcher() {
+    PATCHER.with(|p| {
+        *p.borrow_mut() = Some(Patcher::new());
+    });
+}
+
+/// Set the old binary to patch
+///
+/// # Arguments
+/// * `data` - The old binary data
+#[wasm_bindgen]
+pub fn set_old_binary(data: &[u8]) -> Result<(), u8> {
+    PATCHER.with(|p| {
+        let mut patcher = p.borrow_mut();
+        let patcher = patcher.as_mut().ok_or(1)?; // ErrorCode::PatcherNotInitialized
+        patcher.set_old_binary(data.to_vec());
+        Ok(())
+    })
+}
+
+/// Set patch data
+///
+/// # Arguments
+/// * `data` - The patch data (header + blocks)
+#[wasm_bindgen]
+pub fn set_patch_data(data: &[u8]) -> Result<(), u8> {
+    PATCHER.with(|p| {
+        let mut patcher = p.borrow_mut();
+        let patcher = patcher.as_mut().ok_or(1)?; // ErrorCode::PatcherNotInitialized
+        patcher.set_patch_data(data)
+    })
+}
+
+/// Apply patch and get new binary length
+///
+/// Returns the length of the patched binary
+#[wasm_bindgen]
+pub fn apply_patch_and_get_length() -> Result<u32, u8> {
+    PATCHER.with(|p| {
+        let mut patcher = p.borrow_mut();
+        let patcher = patcher.as_mut().ok_or(1)?; // ErrorCode::PatcherNotInitialized
+        let new_binary = patcher.apply_patch()?;
+        let len = new_binary.len() as u32;
+
+        // Store the patched binary for retrieval
+        patcher.set_old_binary(new_binary);
+
+        Ok(len)
+    })
+}
+
+/// Get patched binary data
+///
+/// Returns a JS Uint8Array with the patched binary
+/// Call apply_patch_and_get_length() first
+#[wasm_bindgen]
+pub fn get_patched_binary() -> Result<Vec<u8>, u8> {
+    PATCHER.with(|p| {
+        let patcher = p.borrow();
+        let patcher = patcher.as_ref().ok_or(1)?; // ErrorCode::PatcherNotInitialized
+
+        // Get the old_binary which now contains the patched result
+        patcher
+            .old_binary
+            .clone()
+            .ok_or(2) // ErrorCode::NoBinary
+    })
+}
+
+/// Apply patch in-place to a buffer (fastest method)
+///
+/// # Arguments
+/// * `buffer` - Mutable buffer containing old binary
+/// * `patch_data` - The patch data
+///
+/// # Performance
+///
+/// Faster than apply_patch() as it modifies in-place without cloning
+#[wasm_bindgen]
+pub fn apply_patch_inplace(buffer: &mut [u8], patch_data: &[u8]) -> Result<(), u8> {
+    Patcher::apply_patch_inplace(buffer, patch_data)
 }
