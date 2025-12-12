@@ -6,6 +6,10 @@ authors = ["Dx-WWW Team"]
 description = "The Transpiler-to-Binary Pipeline - Converts .tsx to .dxb and .wasm"
 license = "MIT OR Apache-2.0"
 
+[lib]
+name = "dx_compiler"
+path = "src/lib.rs"
+
 [[bin]]
 name = "dx"
 path = "src/main.rs"

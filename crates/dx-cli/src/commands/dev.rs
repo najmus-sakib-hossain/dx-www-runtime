@@ -47,8 +47,10 @@ pub async fn execute(port: u16, host: &str, open_browser: bool) -> Result<()> {
     });
 
     // Start HTTP server
-    let addr = format!("{}:{}", host, port);
-    println!("{}", style(format!("🌐 Server running at http://{}", addr)).green().bold());
+    // Convert localhost to 127.0.0.1 for proper parsing
+    let bind_host = if host == "localhost" { "127.0.0.1" } else { host };
+    let addr = format!("{}:{}", bind_host, port);
+    println!("{}", style(format!("🌐 Server running at http://{}:{}", host, port)).green().bold());
     println!("{}", style("   Press Ctrl+C to stop").dim());
     println!();
 
@@ -87,26 +89,33 @@ pub async fn execute(port: u16, host: &str, open_browser: bool) -> Result<()> {
 
 /// Compile the project using dx-compiler
 async fn compile_project(config: &ProjectConfig) -> Result<BuildResult> {
-    // use dx_compiler::Compiler;  // TODO: Enable when dx-compiler exports lib
-    use std::time::Instant;
+    use std::path::Path;
 
-    let start = Instant::now();
+    // Determine entry point
+    let entry = Path::new("src/App.tsx");
+    if !entry.exists() {
+        anyhow::bail!("Entry file not found: {}", entry.display());
+    }
 
-    // TODO: Actually use dx-compiler here
-    // For now, simulate compilation
-    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    // Determine output directory (.dx-cache for dev builds)
+    let output = Path::new(".dx-cache");
 
-    // Determine runtime (micro vs macro)
-    let runtime = if config.build.auto_select {
-        "auto (micro)"
-    } else {
-        config.build.runtime.as_deref().unwrap_or("micro")
-    };
+    // Compile using dx-compiler
+    let compile_result = dx_compiler::compile_tsx(entry, output, false)?;
+
+    // Determine runtime string
+    let runtime = format!(
+        "auto ({})",
+        match compile_result.runtime_variant {
+            dx_compiler::analyzer::RuntimeVariant::Micro => "micro",
+            dx_compiler::analyzer::RuntimeVariant::Macro => "macro",
+        }
+    );
 
     Ok(BuildResult {
-        runtime: runtime.to_string(),
-        size: 23_300, // Simulated
-        duration_ms: start.elapsed().as_secs_f64() * 1000.0,
+        runtime,
+        size: compile_result.total_size as usize,
+        duration_ms: compile_result.compile_time_ms as f64,
     })
 }
 
@@ -184,14 +193,31 @@ async fn watch_and_rebuild(
 
 /// Start the HTTP server using dx-server
 async fn start_server(addr: &str) -> Result<()> {
-    // TODO: Enable when dx-server exports proper API
-    // For now, simulate server running
+    use std::net::SocketAddr;
+    use std::path::Path;
+
     info!("HTTP server started at {}", addr);
+
+    // Create server state and load artifacts
+    let state = dx_server::ServerState::new();
     
-    // Keep server alive
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
+    // Load compiled artifacts from .dx-cache
+    let cache_path = Path::new(".dx-cache");
+    if cache_path.exists() {
+        if let Err(e) = state.load_artifacts(cache_path) {
+            warn!("Failed to load artifacts: {}", e);
+        }
     }
+
+    // Parse address
+    let socket_addr: SocketAddr = addr.parse()
+        .with_context(|| format!("Invalid address: {}", addr))?;
+
+    // Start dx-server
+    dx_server::serve(socket_addr, state).await
+        .map_err(|e| anyhow::anyhow!("Server error: {}", e))?;
+
+    Ok(())
 }
 
 #[derive(Debug)]

@@ -34,16 +34,11 @@ pub async fn execute(release: bool, output: PathBuf, skip_optimize: bool) -> Res
             .progress_chars("=>-"),
     );
 
-    // Step 1: Compile TypeScript to Binary
-    pb.set_message("📝 Compiling TypeScript...");
+    // Step 1: Compile TypeScript to Binary (includes WASM generation)
+    pb.set_message("📝 Compiling TSX to binary...");
     pb.set_position(0);
-    compile_typescript(&config).await?;
-    pb.set_position(30);
-
-    // Step 2: Generate WASM
-    pb.set_message("⚙️  Generating WASM...");
-    generate_wasm(&config, release).await?;
-    pb.set_position(60);
+    let _compile_result = compile_typescript(&config, &output).await?;
+    pb.set_position(70);  // Compilation includes WASM generation
 
     // Step 3: Optimize (if not skipped)
     if !skip_optimize && release {
@@ -87,14 +82,28 @@ pub async fn execute(release: bool, output: PathBuf, skip_optimize: bool) -> Res
 }
 
 /// Compile TypeScript using dx-compiler
-async fn compile_typescript(_config: &ProjectConfig) -> Result<()> {
-    // use dx_compiler::Compiler;  // TODO: Enable when dx-compiler exports lib
+async fn compile_typescript(_config: &ProjectConfig, output: &PathBuf) -> Result<dx_compiler::CompileResult> {
+    use std::path::Path;
 
-    // TODO: Actually compile
-    // For now, simulate
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    // Determine entry point
+    let entry = Path::new("src/App.tsx");
+    if !entry.exists() {
+        anyhow::bail!("Entry file not found: {}", entry.display());
+    }
 
-    Ok(())
+    // Compile using dx-compiler
+    let compile_result = dx_compiler::compile_tsx(entry, output, false)?;
+
+    tracing::info!(
+        "Compiled with {} runtime ({} bytes)",
+        match compile_result.runtime_variant {
+            dx_compiler::analyzer::RuntimeVariant::Micro => "micro",
+            dx_compiler::analyzer::RuntimeVariant::Macro => "macro",
+        },
+        compile_result.total_size
+    );
+
+    Ok(compile_result)
 }
 
 /// Generate WASM binary
