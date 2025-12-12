@@ -17,6 +17,7 @@ members = [
     
     # Developer tools
     "crates/dx-compiler",
+    "crates/dx-cli",
     
     # Server-side (optional)
     "crates/dx-server",

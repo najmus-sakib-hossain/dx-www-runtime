@@ -57,18 +57,21 @@ See [docs/BUNDLE_SIZE.md](docs/BUNDLE_SIZE.md) and [benchmarks/](benchmarks/) fo
 ## Quick Start
 
 ```bash
-# Install Rust & WASM toolchain
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup target add wasm32-unknown-unknown
-cargo install wasm-bindgen-cli --version 0.2.106
+# Install dx-cli
+cargo install dx-cli
 
-# Clone & build example
-git clone https://github.com/yourusername/dx-www-runtime
-cd dx-www-runtime/examples/hello-world
-bash build.sh && python -m http.server 8000
+# Create a new project
+dx new my-app
+cd my-app
+
+# Start development server
+dx dev
+
+# Build for production
+dx build --release
 ```
 
-**Usage:**
+**Write TypeScript, Get Binary:**
 ```tsx
 import { useState } from 'dx';
 
@@ -78,9 +81,7 @@ export default function Counter() {
 }
 ```
 
-```bash
-dx build --release  # Auto-selects Micro or Macro → outputs dist/app.dxb
-```
+The compiler automatically selects Micro (338B) or Macro (7.5KB) runtime based on your app's complexity.
 
 ## Architecture
 
@@ -92,6 +93,7 @@ dx build --release  # Auto-selects Micro or Macro → outputs dist/app.dxb
 - **dx-compiler:** TSX → Binary compiler with automatic Micro/Macro selection (codegen_micro.rs + codegen_macro.rs)
 - **dx-server:** ✨ SSR & Binary Streaming Server (Axum-based, bot detection, ~1ms inflation)
 - **dx-client:** 🎯 Stream + Patch + Cache (Phase 6: incremental loading, XOR diffs, IndexedDB)
+- **dx-cli:** 🎭 Command-Line Orchestrator (Phase 7: `dx new`, `dx dev`, `dx build`)
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for technical deep-dive.
 
@@ -112,7 +114,10 @@ crates/
 ├── dx-client-tiny/ # Minimal runtime (338 bytes)
 ├── dx-packet/      # Binary protocol types (shared)
 ├── dx-server/      # ✨ SSR & Streaming Server (Axum, ~500 lines)
-└── dx-cache/       # IndexedDB caching (JavaScript, 400 lines)
+├── dx-cache/       # IndexedDB caching (JavaScript, 400 lines)
+└── dx-cli/         # 🎭 Command-Line Orchestrator (~1200 lines)
+    ├── commands/         # new, dev, build
+    └── config.rs         # dx.toml parser
 ```
 
 ## Documentation
@@ -135,7 +140,7 @@ crates/
 
 ## Status & Roadmap
 
-**Current (Dec 14, 2025):**
+**Current (Dec 12, 2025):**
 - ✅ Dual-core codegen complete (Micro + Macro)
 - ✅ WASM compilation working for both runtimes
 - ✅ Intelligent compiler with auto-selection
@@ -147,11 +152,17 @@ crates/
   - ✅ XOR block patching (0.25ms, 95% bandwidth savings)
   - ✅ IndexedDB caching with ETags (5ms overhead)
   - ✅ 19/19 tests passing, 27-33x faster than React
+- 🚧 **Phase 7 Started:** The Orchestrator (Day 13)
+  - ✅ dx-cli crate structure
+  - ✅ Commands: new, dev, build, info, clean
+  - ✅ dx.toml configuration system
+  - ✅ File watching with notify
+  - 🔲 Integration with dx-compiler/dx-server
 
-**Next (Dec 15-17):**
-- [ ] Phase 7: Server-side binary generation
-- [ ] Day 16: Binary diff algorithm (server-side)
-- [ ] Day 17: Production deployment & optimization
+**Next (Dec 13-15):**
+- [ ] Complete Phase 7 integration
+- [ ] Day 14: Build Hacker News clone (real app test)
+- [ ] Day 15: Polish & error messages
 
 **Target Release: January 1, 2026**
 - [ ] Production compiler optimizations (tree-shaking, dead code elimination)
